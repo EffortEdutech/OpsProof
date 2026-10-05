@@ -14,7 +14,7 @@ create table public.equipment (
   location_description text,
   installation_date date,
   status public.equipment_status not null default 'ACTIVE',
-  qr_token text not null default encode(gen_random_bytes(18), 'hex'),
+  qr_token text not null default encode(extensions.gen_random_bytes(18), 'hex'),
   last_inspection_at timestamptz,
   next_inspection_at timestamptz,
   metadata jsonb not null default '{}'::jsonb,

@@ -48,7 +48,7 @@ begin
   values (
     v_org,p_maintenance_plan_id,p_client_id,p_site_id,p_building_id,
     coalesce(v_prefix,'FM') || '-JOB-' || to_char(p_scheduled_date,'YYYYMMDD') || '-' ||
-    upper(substr(encode(gen_random_bytes(4),'hex'),1,6)),
+    upper(substr(encode(extensions.gen_random_bytes(4),'hex'),1,6)),
     p_scheduled_date,p_assigned_technician_id,p_notes
   )
   returning * into v_job;

@@ -131,7 +131,7 @@ create policy client_reports_select on public.reports for select using (
     select 1 from public.maintenance_jobs j
     where j.id = job_id
       and j.client_id = (select client_id from public.profiles where id = auth.uid())
-      and status = 'ISSUED'
+      and reports.status = 'ISSUED'
   )
 );
 
