@@ -1,0 +1,15 @@
+{
+  "name": "FireMaint",
+  "short_name": "FireMaint",
+  "start_url": "/technician/today",
+  "display": "standalone",
+  "background_color": "#f7f8f6",
+  "theme_color": "#b42318",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
