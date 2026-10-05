@@ -48,6 +48,8 @@ Private storage buckets and organisation-folder policies exist in `024_storage_p
 
 Implemented now: Phase 0 foundation shell, protected route proxy boundary, Supabase browser/server client separation, management/technician/client route shells, health endpoint, PWA manifest, and local verification scripts.
 
+Local development uses the `306#` port family, currently `3060`.
+
 ## 10. Missing Phases
 
 Domain phases remain absent: clients/sites/buildings, equipment/QR, template engine, maintenance jobs, technician inspection, findings/photos, offline sync, report generation, supervisor issuance, client portal business data, dashboard/calendar metrics, and golden-path E2E.

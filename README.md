@@ -18,6 +18,12 @@ Create environment values from `.env.example`, then run:
 npm run dev
 ```
 
+Local app port:
+
+```text
+http://127.0.0.1:3060
+```
+
 Verify:
 
 ```bash
