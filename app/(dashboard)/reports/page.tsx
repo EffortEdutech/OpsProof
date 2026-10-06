@@ -40,9 +40,25 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       .order("scheduled_date", { ascending: false }),
     supabase
       .from("reports")
-      .select("id,report_number,title,status,generated_at,maintenance_jobs(job_number,clients(name),sites(name))")
+      .select("id,job_id,report_number,title,status,generated_at,maintenance_jobs(job_number,clients(name),sites(name))")
       .order("created_at", { ascending: false })
   ]);
+  const reportJobIds = reports?.map((report) => report.job_id).filter(Boolean) ?? [];
+  const { data: findings, error: findingsError } =
+    reportJobIds.length > 0
+      ? await supabase
+          .from("findings")
+          .select("id,job_id,title,severity,status")
+          .in("job_id", reportJobIds)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null };
+
+  const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
+
+  findings?.forEach((finding) => {
+    const current = findingsByJobId.get(finding.job_id) ?? [];
+    findingsByJobId.set(finding.job_id, [...current, finding]);
+  });
 
   const hasJobs = Boolean(jobs?.length);
 
@@ -92,6 +108,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </Card>
       {reportsError ? (
         <ErrorState title="Reports unavailable" message="The report list could not be loaded." />
+      ) : findingsError ? (
+        <ErrorState title="Evidence unavailable" message="Captured findings could not be loaded." />
       ) : reports && reports.length > 0 ? (
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -102,52 +120,71 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Generated</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {reports.map((report) => (
-                <tr key={report.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <strong>{report.report_number}</strong>
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.title ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.maintenance_jobs?.job_number ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.maintenance_jobs?.clients?.name ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.maintenance_jobs?.sites?.name ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.generated_at ? new Date(report.generated_at).toISOString().slice(0, 10) : "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{report.status}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.status === "GENERATED" ? (
-                      <form action={reviewReport}>
-                        <input name="report_id" type="hidden" value={report.id} />
-                        <Button type="submit" variant="secondary">
-                          Mark Reviewed
-                        </Button>
-                      </form>
-                    ) : null}
-                    {report.status === "REVIEWED" ? (
-                      <form action={issueReport}>
-                        <input name="report_id" type="hidden" value={report.id} />
-                        <Button type="submit">Issue</Button>
-                      </form>
-                    ) : null}
-                    {report.status === "ISSUED" ? "Issued" : null}
-                  </td>
-                </tr>
-              ))}
+              {reports.map((report) => {
+                const reportFindings = findingsByJobId.get(report.job_id) ?? [];
+
+                return (
+                  <tr key={report.id}>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <strong>{report.report_number}</strong>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.title ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.maintenance_jobs?.job_number ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.maintenance_jobs?.clients?.name ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.maintenance_jobs?.sites?.name ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {reportFindings.length > 0 ? (
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <strong>{reportFindings.length} finding{reportFindings.length === 1 ? "" : "s"}</strong>
+                          {reportFindings.slice(0, 2).map((finding) => (
+                            <span key={finding.id} style={{ color: "var(--muted)" }}>
+                              {finding.title} - {finding.severity} - {finding.status}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "No findings"
+                      )}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.generated_at ? new Date(report.generated_at).toISOString().slice(0, 10) : "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{report.status}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.status === "GENERATED" ? (
+                        <form action={reviewReport}>
+                          <input name="report_id" type="hidden" value={report.id} />
+                          <Button type="submit" variant="secondary">
+                            Mark Reviewed
+                          </Button>
+                        </form>
+                      ) : null}
+                      {report.status === "REVIEWED" ? (
+                        <form action={issueReport}>
+                          <input name="report_id" type="hidden" value={report.id} />
+                          <Button type="submit">Issue</Button>
+                        </form>
+                      ) : null}
+                      {report.status === "ISSUED" ? "Issued" : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>
