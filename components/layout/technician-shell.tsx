@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { signOut } from "@/app/(auth)/actions";
+import { Button } from "@/components/ui/button";
 
 export function TechnicianShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -17,9 +19,18 @@ export function TechnicianShell({ children }: Readonly<{ children: React.ReactNo
           padding: "1rem"
         }}
       >
-        <strong>FireMaint Field</strong>
-        <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-          Sync ready
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+          <div>
+            <strong>FireMaint Field</strong>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+              Sync ready
+            </div>
+          </div>
+          <form action={signOut}>
+            <Button type="submit" variant="secondary">
+              Sign Out
+            </Button>
+          </form>
         </div>
       </header>
       <main style={{ padding: "1rem" }}>{children}</main>
