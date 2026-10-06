@@ -16,15 +16,33 @@ export default async function ClientDashboardPage() {
   const supabase = await createClient();
   const { data: reports, error } = await supabase
     .from("reports")
-    .select("id,report_number,title,issued_at,status,maintenance_jobs(job_number,scheduled_date,sites(name))")
+    .select("id,job_id,report_number,title,issued_at,status,maintenance_jobs(job_number,scheduled_date,sites(name))")
     .eq("status", "ISSUED")
     .order("issued_at", { ascending: false });
+  const reportJobIds = reports?.map((report) => report.job_id).filter(Boolean) ?? [];
+  const { data: findings, error: findingsError } =
+    reportJobIds.length > 0
+      ? await supabase
+          .from("findings")
+          .select("id,job_id,title,severity,status,recommendation")
+          .in("job_id", reportJobIds)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null };
+
+  const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
+
+  findings?.forEach((finding) => {
+    const current = findingsByJobId.get(finding.job_id) ?? [];
+    findingsByJobId.set(finding.job_id, [...current, finding]);
+  });
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Client Dashboard" description="Issued reports and evidence will appear here." />
       {error ? (
         <EmptyState title="Reports unavailable" message="Issued reports could not be loaded." />
+      ) : findingsError ? (
+        <EmptyState title="Evidence unavailable" message="Report evidence could not be loaded." />
       ) : reports && reports.length > 0 ? (
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -34,29 +52,48 @@ export default async function ClientDashboardPage() {
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Title</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Issued</th>
               </tr>
             </thead>
             <tbody>
-              {reports.map((report) => (
-                <tr key={report.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <strong>{report.report_number}</strong>
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.title ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.maintenance_jobs?.job_number ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.maintenance_jobs?.sites?.name ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {report.issued_at ? new Date(report.issued_at).toISOString().slice(0, 10) : "Not set"}
-                  </td>
-                </tr>
-              ))}
+              {reports.map((report) => {
+                const reportFindings = findingsByJobId.get(report.job_id) ?? [];
+
+                return (
+                  <tr key={report.id}>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <strong>{report.report_number}</strong>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.title ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.maintenance_jobs?.job_number ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.maintenance_jobs?.sites?.name ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {reportFindings.length > 0 ? (
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <strong>{reportFindings.length} finding{reportFindings.length === 1 ? "" : "s"}</strong>
+                          {reportFindings.slice(0, 2).map((finding) => (
+                            <span key={finding.id} style={{ color: "var(--muted)" }}>
+                              {finding.title} - {finding.severity} - {finding.status}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "No findings"
+                      )}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report.issued_at ? new Date(report.issued_at).toISOString().slice(0, 10) : "Not set"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>

@@ -25,6 +25,9 @@ values
   ('job_a_assigned', extensions.gen_random_uuid()),
   ('job_a_unassigned', extensions.gen_random_uuid()),
   ('job_b_assigned', extensions.gen_random_uuid()),
+  ('finding_a_issued', extensions.gen_random_uuid()),
+  ('finding_a_generated', extensions.gen_random_uuid()),
+  ('finding_b_issued', extensions.gen_random_uuid()),
   ('report_a_issued', extensions.gen_random_uuid()),
   ('report_a_generated', extensions.gen_random_uuid()),
   ('report_b_issued', extensions.gen_random_uuid());
@@ -99,8 +102,14 @@ values
 insert into public.reports(id, organisation_id, job_id, report_number, status)
 values
   ((select id from rls_ids where key='report_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), 'RLS-A-ISSUED', 'ISSUED'),
-  ((select id from rls_ids where key='report_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), 'RLS-A-GENERATED', 'GENERATED'),
+  ((select id from rls_ids where key='report_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_unassigned'), 'RLS-A-GENERATED', 'GENERATED'),
   ((select id from rls_ids where key='report_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='job_b_assigned'), 'RLS-B-ISSUED', 'ISSUED');
+
+insert into public.findings(id, organisation_id, job_id, title, severity, status)
+values
+  ((select id from rls_ids where key='finding_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), 'RLS A Issued Finding', 'OBSERVATION', 'OPEN'),
+  ((select id from rls_ids where key='finding_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_unassigned'), 'RLS A Generated Finding', 'LOW', 'OPEN'),
+  ((select id from rls_ids where key='finding_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='job_b_assigned'), 'RLS B Issued Finding', 'HIGH', 'OPEN');
 
 create temp table rls_results (
   name text primary key,
@@ -172,6 +181,14 @@ select
   'visible reports=' || coalesce(array_to_string(array_agg(report_number order by report_number), ','), '<none>')
 from public.reports;
 
+select pg_temp.as_user('client_user_a');
+insert into rls_results
+select
+  'client_a_sees_only_issued_report_findings',
+  array_agg(title order by title) = array['RLS A Issued Finding'],
+  'visible findings=' || coalesce(array_to_string(array_agg(title order by title), ','), '<none>')
+from public.findings;
+
 select pg_temp.as_user('client_user_b');
 insert into rls_results
 select
@@ -179,6 +196,14 @@ select
   array_agg(report_number order by report_number) = array['RLS-B-ISSUED'],
   'visible reports=' || coalesce(array_to_string(array_agg(report_number order by report_number), ','), '<none>')
 from public.reports;
+
+select pg_temp.as_user('client_user_b');
+insert into rls_results
+select
+  'client_b_cannot_see_client_a_findings',
+  array_agg(title order by title) = array['RLS B Issued Finding'],
+  'visible findings=' || coalesce(array_to_string(array_agg(title order by title), ','), '<none>')
+from public.findings;
 
 select pg_temp.as_user('client_user_a');
 with upd as (
