@@ -1,6 +1,13 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 
-export function ManagementShell({ children }: Readonly<{ children: React.ReactNode }>) {
+type ManagementShellProps = Readonly<{
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+}>;
+
+export function ManagementShell({ children, title, description }: ManagementShellProps) {
   return (
     <div style={{ display: "grid", minHeight: "100vh", gridTemplateColumns: "240px 1fr" }}>
       <aside
@@ -13,9 +20,16 @@ export function ManagementShell({ children }: Readonly<{ children: React.ReactNo
         <strong>FireMaint</strong>
         <nav style={{ display: "grid", gap: "0.75rem", marginTop: "2rem" }}>
           <Link href="/dashboard">Dashboard</Link>
+          <Link href="/clients">Clients</Link>
+          <Link href="/sites">Sites</Link>
+          <Link href="/maintenance">Maintenance</Link>
+          <Link href="/reports">Reports</Link>
         </nav>
       </aside>
-      <main style={{ padding: "2rem" }}>{children}</main>
+      <main style={{ display: "grid", alignContent: "start", gap: "1.5rem", padding: "2rem" }}>
+        {title ? <PageHeader {...(description ? { description } : {})} title={title} /> : null}
+        {children}
+      </main>
     </div>
   );
 }

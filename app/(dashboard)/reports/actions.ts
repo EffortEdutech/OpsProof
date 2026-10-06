@@ -1,0 +1,68 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireProfile } from "@/lib/auth/current-user";
+import { canAccessManagement } from "@/lib/permissions/roles";
+import { createClient } from "@/lib/supabase/server";
+
+function value(formData: FormData, name: string) {
+  const entry = formData.get(name);
+  const text = typeof entry === "string" ? entry.trim() : "";
+  return text.length > 0 ? text : null;
+}
+
+export async function generateReportShell(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const jobId = value(formData, "job_id");
+
+  if (!jobId) {
+    redirect("/reports?error=missing-job");
+  }
+
+  const supabase = await createClient();
+  const { data: job, error: jobError } = await supabase
+    .from("maintenance_jobs")
+    .select("id,organisation_id,job_number")
+    .eq("id", jobId)
+    .single();
+
+  if (jobError || !job) {
+    redirect("/reports?error=job-not-found");
+  }
+
+  const { data: reportNumber, error: numberError } = await supabase.rpc("generate_report_number");
+
+  if (numberError || !reportNumber) {
+    redirect(`/reports?error=${encodeURIComponent(numberError?.code ?? "number-failed")}`);
+  }
+
+  const title = value(formData, "title") ?? `Maintenance Report ${job.job_number}`;
+  const { error } = await supabase.from("reports").insert({
+    organisation_id: profile.organisation_id,
+    job_id: job.id,
+    report_number: reportNumber,
+    report_type: "MAINTENANCE",
+    status: "GENERATED",
+    title,
+    generated_at: new Date().toISOString(),
+    generated_by: profile.id,
+    report_data: {
+      source: "management-report-shell",
+      job_number: job.job_number
+    }
+  });
+
+  if (error) {
+    redirect(`/reports?error=${encodeURIComponent(error.code ?? "create-failed")}`);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?created=1");
+}

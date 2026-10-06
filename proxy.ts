@@ -5,6 +5,14 @@ export async function proxy(request: NextRequest) {
   return updateSession(request);
 }
 
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icons).*)"]
+export const proxyConfig = {
+  matcher: [
+    "/dashboard/:path*",
+    "/clients/:path*",
+    "/sites/:path*",
+    "/maintenance/:path*",
+    "/reports/:path*",
+    "/technician/:path*",
+    "/client/:path*"
+  ]
 };

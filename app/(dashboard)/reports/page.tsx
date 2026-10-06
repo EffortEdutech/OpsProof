@@ -1,0 +1,129 @@
+import { redirect } from "next/navigation";
+import { generateReportShell } from "@/app/(dashboard)/reports/actions";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import { requireProfile } from "@/lib/auth/current-user";
+import { canAccessManagement } from "@/lib/permissions/roles";
+import { createClient } from "@/lib/supabase/server";
+
+type ReportsPageProps = {
+  searchParams?: Promise<{
+    created?: string;
+    error?: string;
+  }>;
+};
+
+const fieldStyle = {
+  minHeight: 44,
+  border: "1px solid var(--border)",
+  borderRadius: 6,
+  padding: 12
+};
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const params = await searchParams;
+  const supabase = await createClient();
+  const [{ data: jobs }, { data: reports, error: reportsError }] = await Promise.all([
+    supabase
+      .from("maintenance_jobs")
+      .select("id,job_number,scheduled_date,clients(name),sites(name)")
+      .order("scheduled_date", { ascending: false }),
+    supabase
+      .from("reports")
+      .select("id,report_number,title,status,generated_at,maintenance_jobs(job_number,clients(name),sites(name))")
+      .order("created_at", { ascending: false })
+  ]);
+
+  const hasJobs = Boolean(jobs?.length);
+
+  return (
+    <div style={{ display: "grid", gap: "1rem" }}>
+      <PageHeader title="Reports" description="Generate report records from completed maintenance evidence." />
+      {params?.created ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Report shell generated.
+        </Card>
+      ) : null}
+      {params?.error ? (
+        <ErrorState
+          title="Report not generated"
+          message={params.error === "missing-job" ? "Choose a maintenance job." : "The report shell could not be created."}
+        />
+      ) : null}
+      <Card>
+        <form action={generateReportShell} style={{ display: "grid", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+            <select aria-label="Maintenance job" disabled={!hasJobs} name="job_id" required style={fieldStyle}>
+              <option value="">{hasJobs ? "Select job" : "Create a maintenance job first"}</option>
+              {jobs?.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.job_number} - {job.clients?.name ?? "Client"} / {job.sites?.name ?? "Site"}
+                </option>
+              ))}
+            </select>
+            <input aria-label="Report title" disabled={!hasJobs} name="title" placeholder="Report title" style={fieldStyle} />
+          </div>
+          <div>
+            <Button disabled={!hasJobs} type="submit">
+              Generate Report Shell
+            </Button>
+          </div>
+        </form>
+      </Card>
+      {reportsError ? (
+        <ErrorState title="Reports unavailable" message="The report list could not be loaded." />
+      ) : reports && reports.length > 0 ? (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Title</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Generated</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((report) => (
+                <tr key={report.id}>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <strong>{report.report_number}</strong>
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.title ?? "Not set"}
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.maintenance_jobs?.job_number ?? "Not set"}
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.maintenance_jobs?.clients?.name ?? "Not set"}
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.maintenance_jobs?.sites?.name ?? "Not set"}
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.generated_at ? new Date(report.generated_at).toISOString().slice(0, 10) : "Not set"}
+                  </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{report.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      ) : (
+        <EmptyState title="No reports yet" message="Generate the first report shell from a maintenance job." />
+      )}
+    </div>
+  );
+}

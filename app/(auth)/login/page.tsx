@@ -1,8 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { signIn } from "./actions";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+    next?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const next = params?.next ?? "/dashboard";
+  const error = params?.error;
+
   return (
     <main
       style={{
@@ -14,7 +26,8 @@ export default function LoginPage() {
     >
       <Card style={{ width: "min(100%, 420px)" }}>
         <PageHeader title="Sign in" description="Access FireMaint using your Supabase account." />
-        <form style={{ display: "grid", gap: "1rem", marginTop: "1.5rem" }}>
+        <form action={signIn} style={{ display: "grid", gap: "1rem", marginTop: "1.5rem" }}>
+          <input name="next" type="hidden" value={next} />
           <input
             aria-label="Email"
             name="email"
@@ -29,7 +42,12 @@ export default function LoginPage() {
             type="password"
             style={{ minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, padding: 12 }}
           />
-          <Button type="button">Continue</Button>
+          {error ? (
+            <p role="alert" style={{ color: "var(--danger)", fontSize: 14 }}>
+              {error === "missing" ? "Enter your email and password." : "Sign in failed. Check your credentials."}
+            </p>
+          ) : null}
+          <Button type="submit">Continue</Button>
         </form>
       </Card>
     </main>

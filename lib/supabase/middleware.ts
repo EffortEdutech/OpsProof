@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { getPublicEnv } from "@/lib/validation/env";
 import type { Database } from "@/lib/supabase/types";
 
-const protectedPrefixes = ["/dashboard", "/technician", "/client"];
+const protectedPrefixes = ["/dashboard", "/clients", "/sites", "/maintenance", "/reports", "/technician", "/client"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
