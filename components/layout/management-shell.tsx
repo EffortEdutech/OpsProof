@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { signOut } from "@/app/(auth)/actions";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 type ManagementShellProps = Readonly<{
   children: React.ReactNode;
@@ -25,6 +27,11 @@ export function ManagementShell({ children, title, description }: ManagementShel
           <Link href="/maintenance">Maintenance</Link>
           <Link href="/reports">Reports</Link>
         </nav>
+        <form action={signOut} style={{ marginTop: "2rem" }}>
+          <Button type="submit" variant="secondary">
+            Sign Out
+          </Button>
+        </form>
       </aside>
       <main style={{ display: "grid", alignContent: "start", gap: "1.5rem", padding: "2rem" }}>
         {title ? <PageHeader {...(description ? { description } : {})} title={title} /> : null}
