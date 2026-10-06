@@ -66,3 +66,61 @@ export async function generateReportShell(formData: FormData) {
   revalidatePath("/dashboard");
   redirect("/reports?created=1");
 }
+
+export async function reviewReport(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const reportId = value(formData, "report_id");
+
+  if (!reportId) {
+    redirect("/reports?error=missing-report");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("reports")
+    .update({
+      status: "REVIEWED",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: profile.id
+    })
+    .eq("id", reportId)
+    .eq("status", "GENERATED");
+
+  if (error) {
+    redirect(`/reports?error=${encodeURIComponent(error.code ?? "review-failed")}`);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?reviewed=1");
+}
+
+export async function issueReport(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const reportId = value(formData, "report_id");
+
+  if (!reportId) {
+    redirect("/reports?error=missing-report");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("issue_report", { p_report_id: reportId });
+
+  if (error) {
+    redirect(`/reports?error=${encodeURIComponent(error.code ?? "issue-failed")}`);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?issued=1");
+}

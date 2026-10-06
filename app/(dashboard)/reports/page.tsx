@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { generateReportShell } from "@/app/(dashboard)/reports/actions";
+import { generateReportShell, issueReport, reviewReport } from "@/app/(dashboard)/reports/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,7 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 type ReportsPageProps = {
   searchParams?: Promise<{
     created?: string;
+    issued?: string;
     error?: string;
+    reviewed?: string;
   }>;
 };
 
@@ -50,6 +52,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       {params?.created ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
           Report shell generated.
+        </Card>
+      ) : null}
+      {params?.reviewed ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Report reviewed.
+        </Card>
+      ) : null}
+      {params?.issued ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Report issued.
         </Card>
       ) : null}
       {params?.error ? (
@@ -92,6 +104,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Generated</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -116,6 +129,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     {report.generated_at ? new Date(report.generated_at).toISOString().slice(0, 10) : "Not set"}
                   </td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{report.status}</td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {report.status === "GENERATED" ? (
+                      <form action={reviewReport}>
+                        <input name="report_id" type="hidden" value={report.id} />
+                        <Button type="submit" variant="secondary">
+                          Mark Reviewed
+                        </Button>
+                      </form>
+                    ) : null}
+                    {report.status === "REVIEWED" ? (
+                      <form action={issueReport}>
+                        <input name="report_id" type="hidden" value={report.id} />
+                        <Button type="submit">Issue</Button>
+                      </form>
+                    ) : null}
+                    {report.status === "ISSUED" ? "Issued" : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
