@@ -48,29 +48,6 @@ export function ManagementShell({ children, title, description }: ManagementShel
         </form>
       </aside>
       <main style={{ display: "grid", alignContent: "start", gap: "1.5rem", padding: "2rem" }}>
-        <div
-          style={{
-            alignItems: "center",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-            padding: "0.75rem 1rem"
-          }}
-        >
-          {navItems.map((item) => (
-            <Link href={item.href} key={item.href}>
-              {item.label}
-            </Link>
-          ))}
-          <form action={signOut} style={{ marginLeft: "auto" }}>
-            <Button type="submit" variant="secondary">
-              Sign Out
-            </Button>
-          </form>
-        </div>
         {title ? <PageHeader {...(description ? { description } : {})} title={title} /> : null}
         {children}
       </main>
