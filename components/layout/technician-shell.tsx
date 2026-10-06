@@ -1,8 +1,18 @@
 import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
+import { CurrentUserBadge } from "@/components/layout/current-user-badge";
 import { Button } from "@/components/ui/button";
+import type { Profile } from "@/lib/supabase/types";
 
-export function TechnicianShell({ children }: Readonly<{ children: React.ReactNode }>) {
+type TechnicianShellProps = Readonly<{
+  children: React.ReactNode;
+  currentUser: {
+    email: string | null;
+    profile: Pick<Profile, "full_name" | "role">;
+  };
+}>;
+
+export function TechnicianShell({ children, currentUser }: TechnicianShellProps) {
   return (
     <div
       style={{
@@ -26,11 +36,14 @@ export function TechnicianShell({ children }: Readonly<{ children: React.ReactNo
               Sync ready
             </div>
           </div>
-          <form action={signOut}>
-            <Button type="submit" variant="secondary">
-              Sign Out
-            </Button>
-          </form>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <CurrentUserBadge email={currentUser.email} profile={currentUser.profile} />
+            <form action={signOut}>
+              <Button type="submit" variant="secondary">
+                Sign Out
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
       <main style={{ padding: "1rem" }}>{children}</main>

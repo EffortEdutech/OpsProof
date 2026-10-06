@@ -1,7 +1,17 @@
 import { signOut } from "@/app/(auth)/actions";
+import { CurrentUserBadge } from "@/components/layout/current-user-badge";
 import { Button } from "@/components/ui/button";
+import type { Profile } from "@/lib/supabase/types";
 
-export function ClientShell({ children }: Readonly<{ children: React.ReactNode }>) {
+type ClientShellProps = Readonly<{
+  children: React.ReactNode;
+  currentUser: {
+    email: string | null;
+    profile: Pick<Profile, "full_name" | "role">;
+  };
+}>;
+
+export function ClientShell({ children, currentUser }: ClientShellProps) {
   return (
     <div style={{ minHeight: "100vh" }}>
       <header
@@ -13,11 +23,14 @@ export function ClientShell({ children }: Readonly<{ children: React.ReactNode }
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <strong>FireMaint Client Portal</strong>
-          <form action={signOut}>
-            <Button type="submit" variant="secondary">
-              Sign Out
-            </Button>
-          </form>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <CurrentUserBadge email={currentUser.email} profile={currentUser.profile} />
+            <form action={signOut}>
+              <Button type="submit" variant="secondary">
+                Sign Out
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
       <main style={{ margin: "0 auto", maxWidth: "960px", padding: "2rem" }}>{children}</main>

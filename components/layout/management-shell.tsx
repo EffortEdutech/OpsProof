@@ -2,9 +2,15 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
+import { CurrentUserBadge } from "@/components/layout/current-user-badge";
+import type { Profile } from "@/lib/supabase/types";
 
 type ManagementShellProps = Readonly<{
   children: React.ReactNode;
+  currentUser: {
+    email: string | null;
+    profile: Pick<Profile, "full_name" | "role">;
+  };
   title?: string;
   description?: string;
 }>;
@@ -17,7 +23,7 @@ const navItems = [
   { href: "/reports", label: "Reports" }
 ];
 
-export function ManagementShell({ children, title, description }: ManagementShellProps) {
+export function ManagementShell({ children, currentUser, title, description }: ManagementShellProps) {
   return (
     <div
       style={{
@@ -41,6 +47,9 @@ export function ManagementShell({ children, title, description }: ManagementShel
             </Link>
           ))}
         </nav>
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: "2rem", paddingTop: "1rem" }}>
+          <CurrentUserBadge email={currentUser.email} profile={currentUser.profile} />
+        </div>
         <form action={signOut} style={{ marginTop: "2rem" }}>
           <Button type="submit" variant="secondary">
             Sign Out
