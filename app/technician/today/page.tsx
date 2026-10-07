@@ -112,7 +112,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {jobsError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>
@@ -174,7 +174,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       )}
       <Card>
         <form action={addFinding} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <input name="next" type="hidden" value="/technician/today" />
             <select aria-label="In-progress job" disabled={inProgressJobs.length === 0} name="job_id" required style={fieldStyle}>
               <option value="">{inProgressJobs.length > 0 ? "Select in-progress job" : "Start a job first"}</option>
@@ -210,7 +210,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {findingsError ? (
         <EmptyState title="Findings unavailable" message="Captured findings could not be loaded." />
       ) : findings && findings.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>

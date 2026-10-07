@@ -128,7 +128,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       ) : null}
       <Card>
         <form action={generateReportShell} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <select aria-label="Maintenance job" disabled={!hasJobs} name="job_id" required style={fieldStyle}>
               <option value="">{hasJobs ? "Select job under review" : "No reviewed jobs ready for report"}</option>
               {reportableJobs.map((job) => (
@@ -151,7 +151,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       ) : findingsError ? (
         <ErrorState title="Evidence unavailable" message="Captured findings could not be loaded." />
       ) : reports && reports.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>

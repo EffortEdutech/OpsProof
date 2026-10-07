@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
       <PageHeader title="Dashboard" description="Management queues for jobs, reports, and client delivery." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
         <MetricCard label="Scheduled Jobs" value={scheduledJobCount} note="Assigned or ready to start" />
         <MetricCard label="In Progress" value={inProgressJobCount} note="Active technician work" />
         <MetricCard label="Awaiting Review" value={submittedJobCount} note="Submitted from field" />

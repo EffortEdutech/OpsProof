@@ -46,7 +46,7 @@ export default async function ClientDashboardPage() {
       ) : findingsError ? (
         <EmptyState title="Evidence unavailable" message="Report evidence could not be loaded." />
       ) : reports && reports.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>

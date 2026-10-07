@@ -58,7 +58,7 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
       {clientsError ? <ErrorState title="Clients unavailable" message="Client choices could not be loaded." /> : null}
       <Card>
         <form action={createSiteRecord} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <select aria-label="Client" disabled={!hasClients} name="client_id" required style={fieldStyle}>
               <option value="">{hasClients ? "Select client" : "Create a client first"}</option>
               {clients?.map((client) => (
@@ -85,7 +85,7 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
       {sitesError ? (
         <ErrorState title="Sites unavailable" message="The site list could not be loaded." />
       ) : sites && sites.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>

@@ -155,7 +155,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       ) : null}
       <Card>
         <form action={createPlanAndJob} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <select aria-label="Client" disabled={!hasSetup} name="client_id" required style={fieldStyle}>
               <option value="">{hasSetup ? "Select client" : "Create a client and site first"}</option>
               {clients?.map((client) => (
@@ -203,7 +203,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       {jobsError || reportsError || findingsError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
+        <Card style={{ padding: 0, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>

@@ -29,8 +29,42 @@ a {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
+}
+
+table {
+  min-width: 720px;
+}
+
+th,
+td {
+  vertical-align: top;
+}
+
+input,
+select {
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 15px;
+  }
+
+  table {
+    min-width: 680px;
+  }
+
+  th,
+  td {
+    padding: 10px !important;
+  }
+
+  button {
+    width: 100%;
+  }
 }
 
 @media print {

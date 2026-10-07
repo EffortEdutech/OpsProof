@@ -96,7 +96,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       </div>
 
       <Card className="print-section">
-        <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
+        <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
           <Field label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
           <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
           <Field label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />

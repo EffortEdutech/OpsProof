@@ -52,7 +52,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
         ) : null}
         <Card>
           <form action={createClientRecord} style={{ display: "grid", gap: "1rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
               <input aria-label="Client name" name="name" placeholder="Client name" required style={inputStyle} />
               <input aria-label="Registration number" name="registration_no" placeholder="Registration number" style={inputStyle} />
               <input aria-label="Industry" name="industry" placeholder="Industry" style={inputStyle} />
@@ -68,7 +68,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
         {error ? (
           <ErrorState title="Clients unavailable" message="The client list could not be loaded." />
         ) : clients && clients.length > 0 ? (
-          <Card style={{ padding: 0, overflow: "hidden" }}>
+          <Card style={{ padding: 0, overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ textAlign: "left", color: "var(--muted)" }}>

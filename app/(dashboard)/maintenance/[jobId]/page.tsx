@@ -114,7 +114,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </div>
 
       <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
           <Field label="Technician" value={technician?.full_name ?? "Unassigned"} />
           <Field label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
           <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
