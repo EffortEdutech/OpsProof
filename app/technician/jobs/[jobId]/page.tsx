@@ -235,6 +235,16 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                       <Button type="submit">Start Checklist</Button>
                     </form>
                   ) : null}
+                  {job.status === "SCHEDULED" && !inspection ? (
+                    <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+                      Start the job first to unlock this checklist.
+                    </div>
+                  ) : null}
+                  {job.status === "SUBMITTED" && !inspection ? (
+                    <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+                      Checklist was not started before submission, so this asset is locked for management review.
+                    </div>
+                  ) : null}
                   {job.status === "IN_PROGRESS" && inspection?.status === "IN_PROGRESS" ? (
                     <form action={completeAssetInspection} style={{ marginTop: "0.75rem" }}>
                       <input name="inspection_id" type="hidden" value={inspection.id} />
