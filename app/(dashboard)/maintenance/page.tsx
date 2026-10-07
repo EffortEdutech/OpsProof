@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { closeJobFromIssuedReport, createPlanAndJob, startJobReview } from "@/app/(dashboard)/maintenance/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -229,7 +230,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 return (
                   <tr key={job.id}>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                      <strong>{job.job_number}</strong>
+                      <Link href={`/maintenance/${job.id}`}>
+                        <strong>{job.job_number}</strong>
+                      </Link>
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
