@@ -25,6 +25,33 @@ const fieldStyle = {
   padding: 12
 };
 
+const reportStatusLabel = {
+  DRAFT: "Draft",
+  GENERATED: "Generated",
+  REVIEWED: "Reviewed",
+  ISSUED: "Issued",
+  VOID: "Void"
+};
+
+function StatusBadge({ children }: { children: string }) {
+  return (
+    <span
+      style={{
+        background: "#eef2f6",
+        border: "1px solid var(--border)",
+        borderRadius: 999,
+        display: "inline-block",
+        fontSize: "0.8125rem",
+        fontWeight: 600,
+        padding: "4px 10px",
+        whiteSpace: "nowrap"
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const profile = await requireProfile();
 
@@ -178,7 +205,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>
                       {formatDate(report.generated_at)}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{report.status}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <StatusBadge>{reportStatusLabel[report.status] ?? report.status}</StatusBadge>
+                    </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {report.status === "GENERATED" ? (
                         <form action={reviewReport}>

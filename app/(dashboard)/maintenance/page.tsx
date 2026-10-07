@@ -25,6 +25,42 @@ const fieldStyle = {
   padding: 12
 };
 
+const jobStatusLabel = {
+  SCHEDULED: "Scheduled",
+  IN_PROGRESS: "In progress",
+  SUBMITTED: "Awaiting review",
+  UNDER_REVIEW: "Ready for report",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
+
+const reportStatusLabel = {
+  DRAFT: "Draft",
+  GENERATED: "Generated",
+  REVIEWED: "Reviewed",
+  ISSUED: "Issued",
+  VOID: "Void"
+};
+
+function StatusBadge({ children }: { children: string }) {
+  return (
+    <span
+      style={{
+        background: "#eef2f6",
+        border: "1px solid var(--border)",
+        borderRadius: 999,
+        display: "inline-block",
+        fontSize: "0.8125rem",
+        fontWeight: 600,
+        padding: "4px 10px",
+        whiteSpace: "nowrap"
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default async function MaintenancePage({ searchParams }: MaintenancePageProps) {
   const profile = await requireProfile();
 
@@ -208,7 +244,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{job.scheduled_date}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
+                    </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {jobFindings.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
@@ -247,7 +285,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                       {report ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{report.report_number}</strong>
-                          <span style={{ color: "var(--muted)" }}>{report.status} {report.issued_at ? `- ${formatDate(report.issued_at)}` : ""}</span>
+                          <span style={{ color: "var(--muted)" }}>{reportStatusLabel[report.status] ?? report.status} {report.issued_at ? `- ${formatDate(report.issued_at)}` : ""}</span>
                         </div>
                       ) : (
                         "No report"
