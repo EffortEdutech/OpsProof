@@ -59,10 +59,24 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       .select("id,job_id,report_number,status,issued_at")
       .order("created_at", { ascending: false })
   ]);
+  const jobIds = jobs?.map((job) => job.id) ?? [];
+  const { data: findings, error: findingsError } =
+    jobIds.length > 0
+      ? await supabase
+          .from("findings")
+          .select("id,job_id,severity,status")
+          .in("job_id", jobIds)
+      : { data: [], error: null };
 
   const hasSetup = Boolean(clients?.length && sites?.length);
   const techniciansById = new Map(technicians?.map((technician) => [technician.id, technician.full_name]) ?? []);
+  const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
   const reportsByJobId = new Map<string, NonNullable<typeof reports>[number]>();
+
+  findings?.forEach((finding) => {
+    const current = findingsByJobId.get(finding.job_id) ?? [];
+    findingsByJobId.set(finding.job_id, [...current, finding]);
+  });
 
   reports?.forEach((report) => {
     if (!reportsByJobId.has(report.job_id) && report.status !== "VOID") {
@@ -149,7 +163,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           </div>
         </form>
       </Card>
-      {jobsError || reportsError ? (
+      {jobsError || reportsError || findingsError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -165,6 +179,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Completed</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Review</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
               </tr>
@@ -172,6 +187,8 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
             <tbody>
               {jobs.map((job) => {
                 const report = reportsByJobId.get(job.id);
+                const jobFindings = findingsByJobId.get(job.id) ?? [];
+                const criticalFindings = jobFindings.filter((finding) => finding.severity === "CRITICAL").length;
 
                 return (
                   <tr key={job.id}>
@@ -193,15 +210,28 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {jobFindings.length > 0 ? (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <strong>{jobFindings.length} finding{jobFindings.length === 1 ? "" : "s"}</strong>
+                          {criticalFindings > 0 ? <span style={{ color: "#8a1f17" }}>{criticalFindings} critical</span> : null}
+                        </div>
+                      ) : (
+                        "No findings"
+                      )}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {job.status === "SUBMITTED" ? (
-                        <form action={startJobReview}>
-                          <input name="job_id" type="hidden" value={job.id} />
-                          <Button type="submit" variant="secondary">
-                            Start Review
-                          </Button>
-                        </form>
+                        <div style={{ display: "grid", gap: 8 }}>
+                          <span>Submitted for review</span>
+                          <form action={startJobReview}>
+                            <input name="job_id" type="hidden" value={job.id} />
+                            <Button type="submit" variant="secondary">
+                              Start Review
+                            </Button>
+                          </form>
+                        </div>
                       ) : null}
-                      {job.status === "UNDER_REVIEW" ? "Ready for report" : null}
+                      {job.status === "UNDER_REVIEW" ? "Ready for report generation" : null}
                       {job.status === "COMPLETED" ? "Closed" : null}
                       {report?.status === "ISSUED" && job.status !== "COMPLETED" ? (
                         <form action={closeJobFromIssuedReport}>
