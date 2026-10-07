@@ -17,6 +17,11 @@ function value(formData: FormData, name: string) {
   return text.length > 0 ? text : null;
 }
 
+function nextPath(formData: FormData) {
+  const next = value(formData, "next");
+  return next?.startsWith("/technician/") ? next : "/technician/today";
+}
+
 function severityValue(formData: FormData) {
   const severity = value(formData, "severity");
   return severity && severities.has(severity as FindingSeverity) ? (severity as FindingSeverity) : "OBSERVATION";
@@ -35,6 +40,7 @@ export async function startJob(formData: FormData) {
     redirect("/technician/today?error=missing-job");
   }
 
+  const redirectTo = nextPath(formData);
   const supabase = await createClient();
   const { error } = await supabase.rpc("start_maintenance_job", { p_job_id: jobId });
 
@@ -43,9 +49,10 @@ export async function startJob(formData: FormData) {
   }
 
   revalidatePath("/technician/today");
+  revalidatePath(`/technician/jobs/${jobId}`);
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
-  redirect("/technician/today?started=1");
+  redirect(`${redirectTo}?started=1`);
 }
 
 export async function submitJob(formData: FormData) {
@@ -61,6 +68,7 @@ export async function submitJob(formData: FormData) {
     redirect("/technician/today?error=missing-job");
   }
 
+  const redirectTo = nextPath(formData);
   const supabase = await createClient();
   const { error } = await supabase.rpc("submit_job", { p_job_id: jobId });
 
@@ -69,10 +77,11 @@ export async function submitJob(formData: FormData) {
   }
 
   revalidatePath("/technician/today");
+  revalidatePath(`/technician/jobs/${jobId}`);
   revalidatePath("/maintenance");
   revalidatePath("/reports");
   revalidatePath("/dashboard");
-  redirect("/technician/today?submitted=1");
+  redirect(`${redirectTo}?submitted=1`);
 }
 
 export async function addFinding(formData: FormData) {
@@ -89,6 +98,7 @@ export async function addFinding(formData: FormData) {
     redirect("/technician/today?error=missing-finding");
   }
 
+  const redirectTo = nextPath(formData);
   const supabase = await createClient();
   const { data: job, error: jobError } = await supabase
     .from("maintenance_jobs")
@@ -117,5 +127,6 @@ export async function addFinding(formData: FormData) {
   }
 
   revalidatePath("/technician/today");
-  redirect("/technician/today?finding=1");
+  revalidatePath(`/technician/jobs/${jobId}`);
+  redirect(`${redirectTo}?finding=1`);
 }

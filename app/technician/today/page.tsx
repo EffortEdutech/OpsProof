@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { addFinding, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +24,34 @@ const fieldStyle = {
   borderRadius: 6,
   padding: 12
 };
+
+const jobStatusLabel = {
+  SCHEDULED: "Scheduled",
+  IN_PROGRESS: "In progress",
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under review",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
+
+function StatusBadge({ children }: { children: string }) {
+  return (
+    <span
+      style={{
+        background: "#eef2f6",
+        border: "1px solid var(--border)",
+        borderRadius: 999,
+        display: "inline-block",
+        fontSize: "0.8125rem",
+        fontWeight: 600,
+        padding: "4px 10px",
+        whiteSpace: "nowrap"
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 export default async function TechnicianTodayPage({ searchParams }: TechnicianTodayPageProps) {
   const profile = await requireProfile();
@@ -100,23 +129,29 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
               {jobs.map((job) => (
                 <tr key={job.id}>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <strong>{job.job_number}</strong>
+                    <Link href={`/technician/jobs/${job.id}`}>
+                      <strong>{job.job_number}</strong>
+                    </Link>
                   </td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
+                  </td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                     {job.status === "SCHEDULED" ? (
                       <form action={startJob}>
                         <input name="job_id" type="hidden" value={job.id} />
+                        <input name="next" type="hidden" value="/technician/today" />
                         <Button type="submit">Start</Button>
                       </form>
                     ) : null}
                     {job.status === "IN_PROGRESS" ? (
                       <form action={submitJob}>
                         <input name="job_id" type="hidden" value={job.id} />
+                        <input name="next" type="hidden" value="/technician/today" />
                         <Button type="submit" variant="secondary">
                           Submit
                         </Button>
@@ -140,6 +175,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       <Card>
         <form action={addFinding} style={{ display: "grid", gap: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+            <input name="next" type="hidden" value="/technician/today" />
             <select aria-label="In-progress job" disabled={inProgressJobs.length === 0} name="job_id" required style={fieldStyle}>
               <option value="">{inProgressJobs.length > 0 ? "Select in-progress job" : "Start a job first"}</option>
               {inProgressJobs.map((job) => (
