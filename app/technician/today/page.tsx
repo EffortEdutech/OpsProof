@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { addFinding, startJob } from "@/app/technician/today/actions";
+import { addFinding, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
@@ -13,6 +13,7 @@ type TechnicianTodayPageProps = {
     error?: string;
     finding?: string;
     started?: string;
+    submitted?: string;
   }>;
 };
 
@@ -44,7 +45,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       .order("created_at", { ascending: false })
   ]);
 
-  const activeJobId = jobs?.[0]?.id;
+  const activeJobId = jobs?.find((job) => job.status === "IN_PROGRESS")?.id ?? jobs?.find((job) => job.status === "SCHEDULED")?.id;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -57,6 +58,11 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {params?.finding ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
           Finding captured.
+        </Card>
+      ) : null}
+      {params?.submitted ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Job submitted for management review.
         </Card>
       ) : null}
       {params?.error ? (
@@ -95,9 +101,21 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                         <input name="job_id" type="hidden" value={job.id} />
                         <Button type="submit">Start</Button>
                       </form>
-                    ) : (
+                    ) : null}
+                    {job.status === "IN_PROGRESS" ? (
+                      <form action={submitJob}>
+                        <input name="job_id" type="hidden" value={job.id} />
+                        <Button type="submit" variant="secondary">
+                          Submit
+                        </Button>
+                      </form>
+                    ) : null}
+                    {job.status === "SUBMITTED" ? (
+                      "Submitted"
+                    ) : null}
+                    {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
                       "Open"
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               ))}

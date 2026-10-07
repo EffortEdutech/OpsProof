@@ -110,6 +110,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Frequency</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Review</th>
               </tr>
             </thead>
             <tbody>
@@ -128,6 +129,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                   </td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {job.status === "SUBMITTED" ? "Ready for report" : "Not ready"}
+                  </td>
                 </tr>
               ))}
             </tbody>

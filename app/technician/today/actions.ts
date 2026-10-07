@@ -48,6 +48,33 @@ export async function startJob(formData: FormData) {
   redirect("/technician/today?started=1");
 }
 
+export async function submitJob(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessTechnician(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const jobId = value(formData, "job_id");
+
+  if (!jobId) {
+    redirect("/technician/today?error=missing-job");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("submit_job", { p_job_id: jobId });
+
+  if (error) {
+    redirect(`/technician/today?error=${encodeURIComponent(error.code ?? "submit-failed")}`);
+  }
+
+  revalidatePath("/technician/today");
+  revalidatePath("/maintenance");
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/technician/today?submitted=1");
+}
+
 export async function addFinding(formData: FormData) {
   const profile = await requireProfile();
 
