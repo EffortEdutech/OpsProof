@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
+import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,17 +33,28 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
 
   const params = await searchParams;
   const supabase = await createClient();
-  const [{ data: clients }, { data: sites }, { data: jobs, error: jobsError }] = await Promise.all([
+  const [{ data: clients }, { data: sites }, { data: jobs, error: jobsError }, { data: reports, error: reportsError }] = await Promise.all([
     supabase.from("clients").select("id,name").eq("active", true).order("name", { ascending: true }),
     supabase.from("sites").select("id,name,client_id").eq("active", true).order("name", { ascending: true }),
     supabase
       .from("maintenance_jobs")
-      .select("id,job_number,scheduled_date,status,clients(name),sites(name),maintenance_plans(name,frequency)")
+      .select("id,job_number,scheduled_date,completed_at,status,clients(name),sites(name),maintenance_plans(name,frequency)")
       .order("scheduled_date", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("reports")
+      .select("id,job_id,report_number,status,issued_at")
       .order("created_at", { ascending: false })
   ]);
 
   const hasSetup = Boolean(clients?.length && sites?.length);
+  const reportsByJobId = new Map<string, NonNullable<typeof reports>[number]>();
+
+  reports?.forEach((report) => {
+    if (!reportsByJobId.has(report.job_id) && report.status !== "VOID") {
+      reportsByJobId.set(report.job_id, report);
+    }
+  });
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -108,7 +120,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           </div>
         </form>
       </Card>
-      {jobsError ? (
+      {jobsError || reportsError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -121,40 +133,58 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Plan</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Frequency</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Completed</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Review</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <strong>{job.job_number}</strong>
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {job.maintenance_plans?.name ?? "Ad hoc"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {job.maintenance_plans?.frequency ?? "Not set"}
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {job.status === "SUBMITTED" ? (
-                      <form action={startJobReview}>
-                        <input name="job_id" type="hidden" value={job.id} />
-                        <Button type="submit" variant="secondary">
-                          Start Review
-                        </Button>
-                      </form>
-                    ) : null}
-                    {job.status === "UNDER_REVIEW" ? "Ready for report" : null}
-                    {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" ? "Not ready" : null}
-                  </td>
-                </tr>
-              ))}
+              {jobs.map((job) => {
+                const report = reportsByJobId.get(job.id);
+
+                return (
+                  <tr key={job.id}>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <strong>{job.job_number}</strong>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {job.maintenance_plans?.name ?? "Ad hoc"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {job.maintenance_plans?.frequency ?? "Not set"}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{job.scheduled_date}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {job.status === "SUBMITTED" ? (
+                        <form action={startJobReview}>
+                          <input name="job_id" type="hidden" value={job.id} />
+                          <Button type="submit" variant="secondary">
+                            Start Review
+                          </Button>
+                        </form>
+                      ) : null}
+                      {job.status === "UNDER_REVIEW" ? "Ready for report" : null}
+                      {job.status === "COMPLETED" ? "Closed" : null}
+                      {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" ? "Not ready" : null}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {report ? (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <strong>{report.report_number}</strong>
+                          <span style={{ color: "var(--muted)" }}>{report.status} {report.issued_at ? `- ${formatDate(report.issued_at)}` : ""}</span>
+                        </div>
+                      ) : (
+                        "No report"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>
