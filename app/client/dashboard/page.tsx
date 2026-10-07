@@ -60,6 +60,13 @@ export default async function ClientDashboardPage() {
             <tbody>
               {reports.map((report) => {
                 const reportFindings = findingsByJobId.get(report.job_id) ?? [];
+                const evidenceSummary =
+                  reportFindings.length > 0
+                    ? `${reportFindings.length} finding${reportFindings.length === 1 ? "" : "s"}: ${reportFindings
+                        .slice(0, 2)
+                        .map((finding) => `${finding.title} - ${finding.severity} - ${finding.status}`)
+                        .join("; ")}${reportFindings.length > 2 ? `; +${reportFindings.length - 2} more` : ""}`
+                    : "No findings";
 
                 return (
                   <tr key={report.id}>
@@ -76,20 +83,7 @@ export default async function ClientDashboardPage() {
                       {report.maintenance_jobs?.sites?.name ?? "Not set"}
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                      {reportFindings.length > 0 ? (
-                        <div style={{ display: "grid", gap: 6 }}>
-                          <strong>{reportFindings.length} finding{reportFindings.length === 1 ? "" : "s"}</strong>
-                          <div style={{ color: "var(--muted)", display: "grid", gap: 4 }}>
-                            {reportFindings.slice(0, 2).map((finding) => (
-                              <div key={finding.id}>
-                                {finding.title} - {finding.severity} - {finding.status}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        "No findings"
-                      )}
+                      {evidenceSummary}
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>
                       {formatDate(report.issued_at)}
