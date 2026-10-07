@@ -79,13 +79,13 @@ export default async function ClientDashboardPage() {
                       {reportFindings.length > 0 ? (
                         <div style={{ display: "grid", gap: 6 }}>
                           <strong>{reportFindings.length} finding{reportFindings.length === 1 ? "" : "s"}</strong>
-                          <ul style={{ color: "var(--muted)", display: "grid", gap: 4, listStyle: "none", margin: 0, padding: 0 }}>
+                          <div style={{ color: "var(--muted)", display: "grid", gap: 4 }}>
                             {reportFindings.slice(0, 2).map((finding) => (
-                              <li key={finding.id}>
+                              <div key={finding.id}>
                                 {finding.title} - {finding.severity} - {finding.status}
-                              </li>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         </div>
                       ) : (
                         "No findings"
