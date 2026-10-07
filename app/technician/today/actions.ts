@@ -145,3 +145,125 @@ export async function addFinding(formData: FormData) {
   revalidatePath(`/technician/jobs/${jobId}`);
   redirect(`${redirectTo}?finding=1`);
 }
+
+export async function startAssetInspection(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessTechnician(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const jobEquipmentId = value(formData, "job_equipment_id");
+  const redirectTo = nextPath(formData);
+
+  if (!jobEquipmentId) {
+    redirect(`${redirectTo}?error=missing-asset`);
+  }
+
+  const supabase = await createClient();
+  const { data: assignedAsset, error: assetError } = await supabase
+    .from("job_equipment")
+    .select("id,job_id,organisation_id,equipment(equipment_type_id),maintenance_jobs(assigned_technician_id,status)")
+    .eq("id", jobEquipmentId)
+    .maybeSingle();
+
+  const assignedToCurrentUser = Array.isArray(assignedAsset?.maintenance_jobs)
+    ? assignedAsset?.maintenance_jobs[0]?.assigned_technician_id === profile.id
+    : assignedAsset?.maintenance_jobs?.assigned_technician_id === profile.id;
+  const jobStatus = Array.isArray(assignedAsset?.maintenance_jobs)
+    ? assignedAsset?.maintenance_jobs[0]?.status
+    : assignedAsset?.maintenance_jobs?.status;
+  const equipmentTypeId = Array.isArray(assignedAsset?.equipment)
+    ? assignedAsset?.equipment[0]?.equipment_type_id
+    : assignedAsset?.equipment?.equipment_type_id;
+
+  if (assetError || !assignedAsset || !assignedToCurrentUser || jobStatus !== "IN_PROGRESS" || !equipmentTypeId) {
+    redirect(`${redirectTo}?error=inspection-not-ready`);
+  }
+
+  const { data: template, error: templateError } = await supabase
+    .from("inspection_templates")
+    .select("id")
+    .eq("equipment_type_id", equipmentTypeId)
+    .eq("status", "ACTIVE")
+    .or(`organisation_id.is.null,organisation_id.eq.${profile.organisation_id}`)
+    .order("organisation_id", { ascending: false, nullsFirst: false })
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (templateError || !template) {
+    redirect(`${redirectTo}?error=missing-template`);
+  }
+
+  const { data: inspection, error: inspectionError } = await supabase
+    .from("inspections")
+    .upsert(
+      {
+        organisation_id: assignedAsset.organisation_id,
+        job_id: assignedAsset.job_id,
+        job_equipment_id: assignedAsset.id,
+        template_id: template.id,
+        technician_id: profile.id,
+        status: "IN_PROGRESS",
+        started_at: new Date().toISOString()
+      },
+      { onConflict: "job_equipment_id" }
+    )
+    .select("id")
+    .single();
+
+  if (inspectionError || !inspection) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(inspectionError?.code ?? "inspection-start-failed")}`);
+  }
+
+  const { error: statusError } = await supabase
+    .from("job_equipment")
+    .update({ status: "IN_PROGRESS" })
+    .eq("id", assignedAsset.id);
+
+  if (statusError) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(statusError.code ?? "asset-status-failed")}`);
+  }
+
+  revalidatePath("/technician/today");
+  revalidatePath(`/technician/jobs/${assignedAsset.job_id}`);
+  redirect(`${redirectTo}?inspection=1`);
+}
+
+export async function completeAssetInspection(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessTechnician(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const inspectionId = value(formData, "inspection_id");
+  const jobEquipmentId = value(formData, "job_equipment_id");
+  const jobId = value(formData, "job_id");
+  const redirectTo = nextPath(formData);
+
+  if (!inspectionId || !jobEquipmentId || !jobId) {
+    redirect(`${redirectTo}?error=missing-inspection`);
+  }
+
+  const supabase = await createClient();
+  const { error: inspectionError } = await supabase.rpc("submit_inspection", { p_inspection_id: inspectionId });
+
+  if (inspectionError) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(inspectionError.code ?? "inspection-complete-failed")}`);
+  }
+
+  const { error: statusError } = await supabase
+    .from("job_equipment")
+    .update({ status: "COMPLETED" })
+    .eq("id", jobEquipmentId);
+
+  if (statusError) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(statusError.code ?? "asset-complete-failed")}`);
+  }
+
+  revalidatePath("/technician/today");
+  revalidatePath(`/technician/jobs/${jobId}`);
+  redirect(`${redirectTo}?inspectionCompleted=1`);
+}

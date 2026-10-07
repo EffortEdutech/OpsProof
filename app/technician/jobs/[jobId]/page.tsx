@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { addFinding, startJob, submitJob } from "@/app/technician/today/actions";
+import { addFinding, completeAssetInspection, startAssetInspection, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
@@ -16,6 +16,8 @@ type TechnicianJobPageProps = {
   searchParams?: Promise<{
     error?: string;
     finding?: string;
+    inspection?: string;
+    inspectionCompleted?: string;
     started?: string;
     submitted?: string;
   }>;
@@ -99,6 +101,31 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       .eq("job_id", job.id)
       .order("created_at", { ascending: true })
   ]);
+  const inspectionIds = jobEquipment?.map((asset) => asset.id) ?? [];
+  const { data: inspections, error: inspectionsError } =
+    inspectionIds.length > 0
+      ? await supabase
+          .from("inspections")
+          .select("id,job_equipment_id,template_id,status,started_at,completed_at,inspection_templates(name)")
+          .in("job_equipment_id", inspectionIds)
+      : { data: [], error: null };
+  const templateIds = inspections?.map((inspection) => inspection.template_id) ?? [];
+  const { data: templateItems, error: templateItemsError } =
+    templateIds.length > 0
+      ? await supabase
+          .from("inspection_template_items")
+          .select("id,template_id,section,item_code,prompt,field_type,required,sort_order,guidance")
+          .in("template_id", templateIds)
+          .order("sort_order", { ascending: true })
+      : { data: [], error: null };
+
+  const inspectionsByAssetId = new Map(inspections?.map((inspection) => [inspection.job_equipment_id, inspection]) ?? []);
+  const itemsByTemplateId = new Map<string, NonNullable<typeof templateItems>>();
+
+  templateItems?.forEach((item) => {
+    const current = itemsByTemplateId.get(item.template_id) ?? [];
+    itemsByTemplateId.set(item.template_id, [...current, item]);
+  });
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -130,9 +157,25 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           Job submitted for management review.
         </Card>
       ) : null}
+      {query?.inspection ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Asset inspection started.
+        </Card>
+      ) : null}
+      {query?.inspectionCompleted ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Asset inspection completed.
+        </Card>
+      ) : null}
       {query?.error ? (
         <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
-          {query.error === "job-not-started" ? "Start the job before capturing findings." : "Field action failed."}
+          {query.error === "job-not-started"
+            ? "Start the job before capturing findings."
+            : query.error === "missing-template"
+              ? "No active checklist template is available for this asset type."
+              : query.error === "inspection-not-ready"
+                ? "Start the job before starting asset inspections."
+                : "Field action failed."}
         </Card>
       ) : null}
 
@@ -148,21 +191,64 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
 
       <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
-        {jobEquipmentError ? (
+        {jobEquipmentError || inspectionsError || templateItemsError ? (
           <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
         ) : jobEquipment && jobEquipment.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
-            {jobEquipment.map((asset) => (
-              <div key={asset.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center" }}>
-                <div>
-                  <strong>{asset.equipment?.asset_code ?? "Asset"}</strong>
-                  <div style={{ color: "var(--muted)", marginTop: 4 }}>
-                    {asset.equipment?.equipment_types?.name ?? "Equipment"} / {asset.equipment?.location_description ?? "Location not set"}
+            {jobEquipment.map((asset) => {
+              const inspection = inspectionsByAssetId.get(asset.id);
+              const checklistItems = inspection ? itemsByTemplateId.get(inspection.template_id) ?? [] : [];
+
+              return (
+                <div key={asset.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center" }}>
+                    <div>
+                      <strong>{asset.equipment?.asset_code ?? "Asset"}</strong>
+                      <div style={{ color: "var(--muted)", marginTop: 4 }}>
+                        {asset.equipment?.equipment_types?.name ?? "Equipment"} / {asset.equipment?.location_description ?? "Location not set"}
+                      </div>
+                    </div>
+                    <StatusBadge>{inspection?.status ?? asset.status}</StatusBadge>
                   </div>
+                  {inspection ? (
+                    <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.5rem" }}>
+                      <strong>{inspection.inspection_templates?.name ?? "Checklist"}</strong>
+                      {checklistItems.length > 0 ? (
+                        checklistItems.map((item) => (
+                          <div key={item.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                              <span>{item.prompt}</span>
+                              <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{item.field_type}</span>
+                            </div>
+                            {item.guidance ? <div style={{ color: "var(--muted)", marginTop: 4 }}>{item.guidance}</div> : null}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ color: "var(--muted)" }}>Checklist items are not available.</div>
+                      )}
+                    </div>
+                  ) : null}
+                  {job.status === "IN_PROGRESS" && !inspection ? (
+                    <form action={startAssetInspection} style={{ marginTop: "0.75rem" }}>
+                      <input name="job_equipment_id" type="hidden" value={asset.id} />
+                      <input name="next" type="hidden" value={next} />
+                      <Button type="submit">Start Checklist</Button>
+                    </form>
+                  ) : null}
+                  {job.status === "IN_PROGRESS" && inspection?.status === "IN_PROGRESS" ? (
+                    <form action={completeAssetInspection} style={{ marginTop: "0.75rem" }}>
+                      <input name="inspection_id" type="hidden" value={inspection.id} />
+                      <input name="job_equipment_id" type="hidden" value={asset.id} />
+                      <input name="job_id" type="hidden" value={job.id} />
+                      <input name="next" type="hidden" value={next} />
+                      <Button type="submit" variant="secondary">
+                        Complete Checklist
+                      </Button>
+                    </form>
+                  ) : null}
                 </div>
-                <StatusBadge>{asset.status}</StatusBadge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <EmptyState title="No assets assigned" message="Management can attach assets when scheduling the job." />
