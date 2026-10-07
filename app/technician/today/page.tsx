@@ -70,7 +70,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       .order("scheduled_date", { ascending: true }),
     supabase
       .from("findings")
-      .select("id,title,severity,status,created_at,maintenance_jobs(job_number)")
+      .select("id,title,severity,status,created_at,maintenance_jobs(id,job_number)")
       .order("created_at", { ascending: false })
   ]);
 
@@ -78,8 +78,8 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
   const findingsByJobId = new Map<string, number>();
 
   findings?.forEach((finding) => {
-    const jobNumber = finding.maintenance_jobs?.job_number;
-    const job = jobs?.find((item) => item.job_number === jobNumber);
+    const jobId = finding.maintenance_jobs?.id;
+    const job = jobs?.find((item) => item.id === jobId);
 
     if (job) {
       findingsByJobId.set(job.id, (findingsByJobId.get(job.id) ?? 0) + 1);
@@ -226,7 +226,15 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                     <strong>{finding.title}</strong>
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.maintenance_jobs?.job_number ?? "Not set"}</td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    {finding.maintenance_jobs?.id ? (
+                      <Link href={`/technician/jobs/${finding.maintenance_jobs.id}`}>
+                        {finding.maintenance_jobs.job_number}
+                      </Link>
+                    ) : (
+                      "Not set"
+                    )}
+                  </td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.severity}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.status}</td>
                 </tr>
