@@ -145,6 +145,11 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
               Capture Finding
             </Button>
           </div>
+          {!activeJobId ? (
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Start a scheduled job before capturing findings. Submitted jobs are locked for management review.
+            </div>
+          ) : null}
         </form>
       </Card>
       {findingsError ? (

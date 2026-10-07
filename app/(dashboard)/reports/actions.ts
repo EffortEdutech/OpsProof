@@ -28,12 +28,30 @@ export async function generateReportShell(formData: FormData) {
   const supabase = await createClient();
   const { data: job, error: jobError } = await supabase
     .from("maintenance_jobs")
-    .select("id,organisation_id,job_number")
+    .select("id,organisation_id,job_number,status")
     .eq("id", jobId)
     .single();
 
   if (jobError || !job) {
     redirect("/reports?error=job-not-found");
+  }
+
+  if (job.status !== "SUBMITTED") {
+    redirect("/reports?error=job-not-submitted");
+  }
+
+  const { count: existingReportCount, error: existingReportError } = await supabase
+    .from("reports")
+    .select("id", { count: "exact", head: true })
+    .eq("job_id", job.id)
+    .neq("status", "VOID");
+
+  if (existingReportError) {
+    redirect(`/reports?error=${encodeURIComponent(existingReportError.code ?? "report-check-failed")}`);
+  }
+
+  if ((existingReportCount ?? 0) > 0) {
+    redirect("/reports?error=report-exists");
   }
 
   const { data: reportNumber, error: numberError } = await supabase.rpc("generate_report_number");

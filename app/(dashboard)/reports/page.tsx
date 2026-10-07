@@ -38,6 +38,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     supabase
       .from("maintenance_jobs")
       .select("id,job_number,scheduled_date,clients(name),sites(name)")
+      .eq("status", "SUBMITTED")
       .order("scheduled_date", { ascending: false }),
     supabase
       .from("reports")
@@ -61,7 +62,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     findingsByJobId.set(finding.job_id, [...current, finding]);
   });
 
-  const hasJobs = Boolean(jobs?.length);
+  const reportedJobIds = new Set(reports?.filter((report) => report.status !== "VOID").map((report) => report.job_id) ?? []);
+  const reportableJobs = jobs?.filter((job) => !reportedJobIds.has(job.id)) ?? [];
+  const hasJobs = reportableJobs.length > 0;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -84,15 +87,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       {params?.error ? (
         <ErrorState
           title="Report not generated"
-          message={params.error === "missing-job" ? "Choose a maintenance job." : "The report shell could not be created."}
+          message={
+            params.error === "missing-job"
+              ? "Choose a submitted maintenance job."
+              : params.error === "job-not-submitted"
+                ? "Only submitted jobs can be converted into reports."
+                : params.error === "report-exists"
+                  ? "That job already has a report."
+                  : "The report shell could not be created."
+          }
         />
       ) : null}
       <Card>
         <form action={generateReportShell} style={{ display: "grid", gap: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
             <select aria-label="Maintenance job" disabled={!hasJobs} name="job_id" required style={fieldStyle}>
-              <option value="">{hasJobs ? "Select job" : "Create a maintenance job first"}</option>
-              {jobs?.map((job) => (
+              <option value="">{hasJobs ? "Select submitted job" : "No submitted jobs ready for report"}</option>
+              {reportableJobs.map((job) => (
                 <option key={job.id} value={job.id}>
                   {job.job_number} - {job.clients?.name ?? "Client"} / {job.sites?.name ?? "Site"}
                 </option>
