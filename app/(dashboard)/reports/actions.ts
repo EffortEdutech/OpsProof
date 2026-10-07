@@ -132,13 +132,28 @@ export async function issueReport(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("issue_report", { p_report_id: reportId });
+  const { data: issuedReport, error } = await supabase.rpc("issue_report", { p_report_id: reportId });
 
-  if (error) {
+  if (error || !issuedReport) {
     redirect(`/reports?error=${encodeURIComponent(error.code ?? "issue-failed")}`);
   }
 
+  const { error: jobError } = await supabase
+    .from("maintenance_jobs")
+    .update({
+      status: "COMPLETED",
+      completed_at: new Date().toISOString()
+    })
+    .eq("id", issuedReport.job_id)
+    .eq("status", "UNDER_REVIEW");
+
+  if (jobError) {
+    redirect(`/reports?error=${encodeURIComponent(jobError.code ?? "job-complete-failed")}`);
+  }
+
   revalidatePath("/reports");
+  revalidatePath("/maintenance");
   revalidatePath("/dashboard");
+  revalidatePath("/client/dashboard");
   redirect("/reports?issued=1");
 }
