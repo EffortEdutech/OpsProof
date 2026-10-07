@@ -32,3 +32,42 @@ button,
 input {
   font: inherit;
 }
+
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #111111;
+    --muted: #444444;
+    --border: #b8b8b8;
+    --surface: #ffffff;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-sheet {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  .print-section {
+    break-inside: avoid;
+    border: 1px solid var(--border) !important;
+    box-shadow: none !important;
+    margin-bottom: 14px;
+    padding: 18px !important;
+  }
+
+  .print-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

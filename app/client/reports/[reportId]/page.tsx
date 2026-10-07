@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { PrintButton } from "@/components/ui/print-button";
 import { EmptyState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
@@ -68,20 +69,25 @@ export default async function ClientReportPage({ params }: ClientReportPageProps
     .order("created_at", { ascending: false });
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" }}>
         <div>
-          <Link href="/client/dashboard" style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+          <Link className="no-print" href="/client/dashboard" style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
             Back to client dashboard
           </Link>
           <h1 style={{ margin: "0.5rem 0 0", fontSize: "1.75rem" }}>{report.report_number}</h1>
           <div style={{ color: "var(--muted)", marginTop: 4 }}>{report.title ?? "Maintenance report"}</div>
         </div>
-        <StatusBadge>Issued</StatusBadge>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div className="no-print">
+            <PrintButton />
+          </div>
+          <StatusBadge>Issued</StatusBadge>
+        </div>
       </div>
 
-      <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
+      <Card className="print-section">
+        <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
           <Field label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
           <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
           <Field label="Scheduled" value={report.maintenance_jobs?.scheduled_date ?? "Not set"} />
@@ -89,7 +95,7 @@ export default async function ClientReportPage({ params }: ClientReportPageProps
         </div>
       </Card>
 
-      <Card>
+      <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Evidence</h2>
         {findingsError ? (
           <EmptyState title="Evidence unavailable" message="Report evidence could not be loaded." />

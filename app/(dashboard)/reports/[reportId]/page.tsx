@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { issueReport, reviewReport } from "@/app/(dashboard)/reports/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PrintButton } from "@/components/ui/print-button";
 import { EmptyState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
@@ -77,20 +78,25 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
     .order("created_at", { ascending: false });
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" }}>
         <div>
-          <Link href="/reports" style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+          <Link className="no-print" href="/reports" style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
             Back to reports
           </Link>
           <h1 style={{ margin: "0.5rem 0 0", fontSize: "1.75rem" }}>{report.report_number}</h1>
           <div style={{ color: "var(--muted)", marginTop: 4 }}>{report.title ?? "Untitled report"}</div>
         </div>
-        <StatusBadge>{reportStatusLabel[report.status] ?? report.status}</StatusBadge>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div className="no-print">
+            <PrintButton />
+          </div>
+          <StatusBadge>{reportStatusLabel[report.status] ?? report.status}</StatusBadge>
+        </div>
       </div>
 
-      <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
+      <Card className="print-section">
+        <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem" }}>
           <Field label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
           <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
           <Field label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
@@ -102,7 +108,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         </div>
       </Card>
 
-      <Card>
+      <Card className="no-print">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Report action</h2>
         {report.status === "GENERATED" ? (
           <form action={reviewReport}>
@@ -124,7 +130,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         ) : null}
       </Card>
 
-      <Card>
+      <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Evidence included</h2>
         {findingsError ? (
           <EmptyState title="Evidence unavailable" message="Captured findings could not be loaded." />
