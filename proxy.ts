@@ -10,6 +10,7 @@ export const proxyConfig = {
     "/dashboard/:path*",
     "/clients/:path*",
     "/sites/:path*",
+    "/equipment/:path*",
     "/maintenance/:path*",
     "/reports/:path*",
     "/technician/:path*",

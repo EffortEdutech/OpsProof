@@ -4,6 +4,7 @@ const protectedRoutes = [
   "/dashboard",
   "/clients",
   "/sites",
+  "/equipment",
   "/maintenance",
   "/maintenance/example-job",
   "/reports",
