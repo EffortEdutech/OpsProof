@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
@@ -71,7 +72,9 @@ export default async function ClientDashboardPage() {
                 return (
                   <tr key={report.id}>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                      <strong>{report.report_number}</strong>
+                      <Link href={`/client/reports/${report.id}`}>
+                        <strong>{report.report_number}</strong>
+                      </Link>
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {report.title ?? "Not set"}

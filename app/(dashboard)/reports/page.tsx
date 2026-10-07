@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { generateReportShell, issueReport, reviewReport } from "@/app/(dashboard)/reports/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -179,7 +180,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 return (
                   <tr key={report.id}>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                      <strong>{report.report_number}</strong>
+                      <Link href={`/reports/${report.id}`}>
+                        <strong>{report.report_number}</strong>
+                      </Link>
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {report.title ?? "Not set"}
