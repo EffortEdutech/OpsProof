@@ -115,3 +115,53 @@ export async function startJobReview(formData: FormData) {
   revalidatePath("/dashboard");
   redirect("/maintenance?review=1");
 }
+
+export async function closeJobFromIssuedReport(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const jobId = value(formData, "job_id");
+
+  if (!jobId) {
+    redirect("/maintenance?error=missing-job");
+  }
+
+  const supabase = await createClient();
+  const { count: issuedReportCount, error: reportError } = await supabase
+    .from("reports")
+    .select("id", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .eq("status", "ISSUED");
+
+  if (reportError) {
+    redirect(`/maintenance?error=${encodeURIComponent(reportError.code ?? "report-check-failed")}`);
+  }
+
+  if ((issuedReportCount ?? 0) === 0) {
+    redirect("/maintenance?error=missing-issued-report");
+  }
+
+  const { data: completedJob, error } = await supabase
+    .from("maintenance_jobs")
+    .update({
+      status: "COMPLETED",
+      completed_at: new Date().toISOString()
+    })
+    .eq("id", jobId)
+    .neq("status", "COMPLETED")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !completedJob) {
+    redirect(`/maintenance?error=${encodeURIComponent(error?.code ?? "job-close-failed")}`);
+  }
+
+  revalidatePath("/maintenance");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  revalidatePath("/client/dashboard");
+  redirect("/maintenance?closed=1");
+}

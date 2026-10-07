@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createPlanAndJob, startJobReview } from "@/app/(dashboard)/maintenance/actions";
+import { closeJobFromIssuedReport, createPlanAndJob, startJobReview } from "@/app/(dashboard)/maintenance/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 type MaintenancePageProps = {
   searchParams?: Promise<{
     created?: string;
+    closed?: string;
     error?: string;
     review?: string;
   }>;
@@ -69,6 +70,11 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           Job moved under management review.
         </Card>
       ) : null}
+      {params?.closed ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Job closed from issued report.
+        </Card>
+      ) : null}
       {params?.error ? (
         <ErrorState
           title="Maintenance job not saved"
@@ -77,6 +83,8 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               ? "Choose a client, site, frequency, and dates."
               : params.error === "missing-job"
                 ? "Choose a submitted job to review."
+                : params.error === "missing-issued-report"
+                  ? "Only jobs with issued reports can be closed this way."
                 : "The maintenance job could not be saved."
           }
         />
@@ -170,7 +178,15 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                       ) : null}
                       {job.status === "UNDER_REVIEW" ? "Ready for report" : null}
                       {job.status === "COMPLETED" ? "Closed" : null}
-                      {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" ? "Not ready" : null}
+                      {report?.status === "ISSUED" && job.status !== "COMPLETED" ? (
+                        <form action={closeJobFromIssuedReport}>
+                          <input name="job_id" type="hidden" value={job.id} />
+                          <Button type="submit" variant="secondary">
+                            Close Job
+                          </Button>
+                        </form>
+                      ) : null}
+                      {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" && report?.status !== "ISSUED" ? "Not ready" : null}
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {report ? (
