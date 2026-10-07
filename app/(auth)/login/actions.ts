@@ -2,6 +2,19 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { AppRole } from "@/lib/supabase/types";
+
+function getRoleHome(role: AppRole | null | undefined) {
+  if (role === "CLIENT") {
+    return "/client/dashboard";
+  }
+
+  if (role === "TECHNICIAN") {
+    return "/technician/today";
+  }
+
+  return "/dashboard";
+}
 
 function getSafeNext(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
@@ -27,5 +40,12 @@ export async function signIn(formData: FormData) {
     redirect(`/login?next=${encodeURIComponent(next)}&error=invalid`);
   }
 
-  redirect(next);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).eq("active", true).maybeSingle()
+    : { data: null };
+
+  redirect(next === "/dashboard" ? getRoleHome(profile?.role) : next);
 }
