@@ -34,12 +34,24 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
 
   const params = await searchParams;
   const supabase = await createClient();
-  const [{ data: clients }, { data: sites }, { data: jobs, error: jobsError }, { data: reports, error: reportsError }] = await Promise.all([
+  const [
+    { data: clients },
+    { data: sites },
+    { data: technicians },
+    { data: jobs, error: jobsError },
+    { data: reports, error: reportsError }
+  ] = await Promise.all([
     supabase.from("clients").select("id,name").eq("active", true).order("name", { ascending: true }),
     supabase.from("sites").select("id,name,client_id").eq("active", true).order("name", { ascending: true }),
     supabase
+      .from("profiles")
+      .select("id,full_name")
+      .eq("role", "TECHNICIAN")
+      .eq("active", true)
+      .order("full_name", { ascending: true }),
+    supabase
       .from("maintenance_jobs")
-      .select("id,job_number,scheduled_date,completed_at,status,clients(name),sites(name),maintenance_plans(name,frequency)")
+      .select("id,job_number,scheduled_date,completed_at,status,assigned_technician_id,clients(name),sites(name),maintenance_plans(name,frequency)")
       .order("scheduled_date", { ascending: true })
       .order("created_at", { ascending: false }),
     supabase
@@ -49,6 +61,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
   ]);
 
   const hasSetup = Boolean(clients?.length && sites?.length);
+  const techniciansById = new Map(technicians?.map((technician) => [technician.id, technician.full_name]) ?? []);
   const reportsByJobId = new Map<string, NonNullable<typeof reports>[number]>();
 
   reports?.forEach((report) => {
@@ -116,6 +129,14 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               <option value="YEARLY">Yearly</option>
               <option value="CUSTOM">Custom</option>
             </select>
+            <select aria-label="Assigned technician" disabled={!hasSetup} name="assigned_technician_id" style={fieldStyle}>
+              <option value="">Unassigned</option>
+              {technicians?.map((technician) => (
+                <option key={technician.id} value={technician.id}>
+                  {technician.full_name}
+                </option>
+              ))}
+            </select>
             <input aria-label="Custom interval days" disabled={!hasSetup} min={1} name="interval_days" placeholder="Custom interval days" style={fieldStyle} type="number" />
             <input aria-label="Plan start date" disabled={!hasSetup} name="start_date" required style={fieldStyle} type="date" />
             <input aria-label="First scheduled date" disabled={!hasSetup} name="scheduled_date" required style={fieldStyle} type="date" />
@@ -138,6 +159,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assigned</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Plan</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Frequency</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
@@ -158,6 +180,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {job.assigned_technician_id ? techniciansById.get(job.assigned_technician_id) ?? "Assigned" : "Unassigned"}
+                    </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {job.maintenance_plans?.name ?? "Ad hoc"}
                     </td>

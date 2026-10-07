@@ -36,6 +36,7 @@ export async function createPlanAndJob(formData: FormData) {
   const startDate = value(formData, "start_date");
   const scheduledDate = value(formData, "scheduled_date") ?? startDate;
   const intervalDays = value(formData, "interval_days");
+  const technicianId = value(formData, "assigned_technician_id");
 
   if (!clientId || !siteId || !name || !frequency || !startDate || !scheduledDate) {
     redirect("/maintenance?error=missing-required");
@@ -67,6 +68,7 @@ export async function createPlanAndJob(formData: FormData) {
     p_site_id: siteId,
     p_building_id: null,
     p_scheduled_date: scheduledDate,
+    ...(technicianId ? { p_assigned_technician_id: technicianId } : {}),
     ...(notes ? { p_notes: notes } : {})
   } as unknown as Database["public"]["Functions"]["create_maintenance_job"]["Args"];
 
