@@ -31,6 +31,7 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run test:e2e
 ```
 
 Health endpoint:
@@ -40,6 +41,7 @@ Health endpoint:
 ```
 
 See `docs/FireMaint_Repository_Reality_Check.md` for the current implementation audit.
+See `docs/TESTING.md` for unit, e2e, authenticated smoke, and RLS test instructions.
 
 ## Supabase
 
