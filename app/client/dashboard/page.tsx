@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireProfile } from "@/lib/auth/current-user";
+import { formatDate } from "@/lib/format/date";
 import { canAccessClientPortal } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -78,18 +79,20 @@ export default async function ClientDashboardPage() {
                       {reportFindings.length > 0 ? (
                         <div style={{ display: "grid", gap: 6 }}>
                           <strong>{reportFindings.length} finding{reportFindings.length === 1 ? "" : "s"}</strong>
-                          {reportFindings.slice(0, 2).map((finding) => (
-                            <span key={finding.id} style={{ color: "var(--muted)" }}>
-                              {finding.title} - {finding.severity} - {finding.status}
-                            </span>
-                          ))}
+                          <ul style={{ color: "var(--muted)", display: "grid", gap: 4, listStyle: "none", margin: 0, padding: 0 }}>
+                            {reportFindings.slice(0, 2).map((finding) => (
+                              <li key={finding.id}>
+                                {finding.title} - {finding.severity} - {finding.status}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       ) : (
                         "No findings"
                       )}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                      {report.issued_at ? new Date(report.issued_at).toISOString().slice(0, 10) : "Not set"}
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                      {formatDate(report.issued_at)}
                     </td>
                   </tr>
                 );
