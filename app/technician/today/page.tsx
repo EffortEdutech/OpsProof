@@ -70,12 +70,24 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       .order("scheduled_date", { ascending: true }),
     supabase
       .from("findings")
-      .select("id,title,severity,status,created_at,maintenance_jobs(id,job_number)")
+      .select("id,title,severity,status,created_at,maintenance_jobs(id,job_number),equipment(asset_code)")
       .order("created_at", { ascending: false })
   ]);
+  const jobIds = jobs?.map((job) => job.id) ?? [];
+  const { data: jobEquipment, error: jobEquipmentError } =
+    jobIds.length > 0
+      ? await supabase
+          .from("job_equipment")
+          .select("id,job_id,status,equipment_id,equipment(asset_code,location_description,equipment_types(name,code))")
+          .in("job_id", jobIds)
+          .order("created_at", { ascending: true })
+      : { data: [], error: null };
 
   const inProgressJobs = jobs?.filter((job) => job.status === "IN_PROGRESS") ?? [];
   const findingsByJobId = new Map<string, number>();
+  const equipmentByJobId = new Map<string, NonNullable<typeof jobEquipment>>();
+  const inProgressEquipment =
+    jobEquipment?.filter((asset) => inProgressJobs.some((job) => job.id === asset.job_id)) ?? [];
 
   findings?.forEach((finding) => {
     const jobId = finding.maintenance_jobs?.id;
@@ -84,6 +96,11 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
     if (job) {
       findingsByJobId.set(job.id, (findingsByJobId.get(job.id) ?? 0) + 1);
     }
+  });
+
+  jobEquipment?.forEach((asset) => {
+    const current = equipmentByJobId.get(asset.job_id) ?? [];
+    equipmentByJobId.set(asset.job_id, [...current, asset]);
   });
 
   return (
@@ -106,10 +123,14 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       ) : null}
       {params?.error ? (
         <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
-          {params.error === "job-not-started" ? "Start the job before capturing findings." : "Field action failed."}
+          {params.error === "job-not-started"
+            ? "Start the job before capturing findings."
+            : params.error === "equipment-not-assigned"
+              ? "Choose an asset assigned to this job."
+              : "Field action failed."}
         </Card>
       ) : null}
-      {jobsError ? (
+      {jobsError || jobEquipmentError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <Card style={{ padding: 0, overflowX: "auto" }}>
@@ -121,51 +142,67 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assets</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Findings</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <Link href={`/technician/jobs/${job.id}`}>
-                      <strong>{job.job_number}</strong>
-                    </Link>
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
-                  </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {job.status === "SCHEDULED" ? (
-                      <form action={startJob}>
-                        <input name="job_id" type="hidden" value={job.id} />
-                        <input name="next" type="hidden" value="/technician/today" />
-                        <Button type="submit">Start</Button>
-                      </form>
-                    ) : null}
-                    {job.status === "IN_PROGRESS" ? (
-                      <form action={submitJob}>
-                        <input name="job_id" type="hidden" value={job.id} />
-                        <input name="next" type="hidden" value="/technician/today" />
-                        <Button type="submit" variant="secondary">
-                          Submit
-                        </Button>
-                      </form>
-                    ) : null}
-                    {job.status === "SUBMITTED" ? (
-                      "Submitted"
-                    ) : null}
-                    {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
-                      "Open"
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
+              {jobs.map((job) => {
+                const jobAssets = equipmentByJobId.get(job.id) ?? [];
+
+                return (
+                  <tr key={job.id}>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <Link href={`/technician/jobs/${job.id}`}>
+                        <strong>{job.job_number}</strong>
+                      </Link>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {jobAssets.length > 0 ? (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          {jobAssets.map((asset) => (
+                            <span key={asset.id}>{asset.equipment?.asset_code ?? "Asset"}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        "No assets"
+                      )}
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {job.status === "SCHEDULED" ? (
+                        <form action={startJob}>
+                          <input name="job_id" type="hidden" value={job.id} />
+                          <input name="next" type="hidden" value="/technician/today" />
+                          <Button type="submit">Start</Button>
+                        </form>
+                      ) : null}
+                      {job.status === "IN_PROGRESS" ? (
+                        <form action={submitJob}>
+                          <input name="job_id" type="hidden" value={job.id} />
+                          <input name="next" type="hidden" value="/technician/today" />
+                          <Button type="submit" variant="secondary">
+                            Submit
+                          </Button>
+                        </form>
+                      ) : null}
+                      {job.status === "SUBMITTED" ? (
+                        "Submitted"
+                      ) : null}
+                      {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
+                        "Open"
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>
@@ -183,6 +220,18 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                   {job.job_number} - {job.clients?.name ?? "Client"} / {job.sites?.name ?? "Site"}
                 </option>
               ))}
+            </select>
+            <select aria-label="Assigned asset" disabled={inProgressEquipment.length === 0} name="equipment_id" style={fieldStyle}>
+              <option value="">{inProgressEquipment.length > 0 ? "Optional assigned asset" : "No job assets assigned"}</option>
+              {inProgressEquipment.map((asset) => {
+                const job = inProgressJobs.find((item) => item.id === asset.job_id);
+
+                return (
+                  <option key={asset.id} value={asset.equipment_id}>
+                    {job?.job_number ?? "Job"} - {asset.equipment?.asset_code ?? "Asset"}
+                  </option>
+                );
+              })}
             </select>
             <input aria-label="Finding title" disabled={inProgressJobs.length === 0} name="title" placeholder="Finding title" required style={fieldStyle} />
             <select aria-label="Severity" disabled={inProgressJobs.length === 0} name="severity" style={fieldStyle}>
@@ -216,6 +265,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
               <tr style={{ textAlign: "left", color: "var(--muted)" }}>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Finding</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Asset</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Severity</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
               </tr>
@@ -235,6 +285,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                       "Not set"
                     )}
                   </td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.equipment?.asset_code ?? "Not set"}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.severity}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.status}</td>
                 </tr>

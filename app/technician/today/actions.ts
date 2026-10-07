@@ -93,6 +93,7 @@ export async function addFinding(formData: FormData) {
 
   const jobId = value(formData, "job_id");
   const title = value(formData, "title");
+  const equipmentId = value(formData, "equipment_id");
 
   if (!jobId || !title) {
     redirect("/technician/today?error=missing-finding");
@@ -112,9 +113,23 @@ export async function addFinding(formData: FormData) {
     redirect("/technician/today?error=job-not-started");
   }
 
+  if (equipmentId) {
+    const { data: assignedAsset, error: equipmentError } = await supabase
+      .from("job_equipment")
+      .select("id")
+      .eq("job_id", job.id)
+      .eq("equipment_id", equipmentId)
+      .maybeSingle();
+
+    if (equipmentError || !assignedAsset) {
+      redirect(`${redirectTo}?error=equipment-not-assigned`);
+    }
+  }
+
   const { error } = await supabase.from("findings").insert({
     organisation_id: job.organisation_id,
     job_id: job.id,
+    equipment_id: equipmentId,
     title,
     severity: severityValue(formData),
     description: value(formData, "description"),

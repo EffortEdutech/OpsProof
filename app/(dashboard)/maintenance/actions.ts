@@ -37,12 +37,35 @@ export async function createPlanAndJob(formData: FormData) {
   const scheduledDate = value(formData, "scheduled_date") ?? startDate;
   const intervalDays = value(formData, "interval_days");
   const technicianId = value(formData, "assigned_technician_id");
+  const equipmentId = value(formData, "equipment_id");
 
   if (!clientId || !siteId || !name || !frequency || !startDate || !scheduledDate) {
     redirect("/maintenance?error=missing-required");
   }
 
   const supabase = await createClient();
+  let buildingId: string | null = null;
+
+  if (equipmentId) {
+    const { data: equipment, error: equipmentError } = await supabase
+      .from("equipment")
+      .select("id,building_id,buildings!inner(site_id)")
+      .eq("id", equipmentId)
+      .eq("organisation_id", profile.organisation_id)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    const equipmentSiteId = Array.isArray(equipment?.buildings)
+      ? equipment?.buildings[0]?.site_id
+      : equipment?.buildings?.site_id;
+
+    if (equipmentError || !equipment || equipmentSiteId !== siteId) {
+      redirect("/maintenance?error=equipment-site-mismatch");
+    }
+
+    buildingId = equipment.building_id;
+  }
+
   const { data: plan, error: planError } = await supabase
     .from("maintenance_plans")
     .insert({
@@ -66,16 +89,28 @@ export async function createPlanAndJob(formData: FormData) {
     p_maintenance_plan_id: plan.id,
     p_client_id: clientId,
     p_site_id: siteId,
-    p_building_id: null,
+    p_building_id: buildingId,
     p_scheduled_date: scheduledDate,
     ...(technicianId ? { p_assigned_technician_id: technicianId } : {}),
     ...(notes ? { p_notes: notes } : {})
   } as unknown as Database["public"]["Functions"]["create_maintenance_job"]["Args"];
 
-  const { error: jobError } = await supabase.rpc("create_maintenance_job", jobArgs);
+  const { data: job, error: jobError } = await supabase.rpc("create_maintenance_job", jobArgs);
 
-  if (jobError) {
+  if (jobError || !job) {
     redirect(`/maintenance?error=${encodeURIComponent(jobError.code ?? "job-create-failed")}`);
+  }
+
+  if (equipmentId) {
+    const { error: jobEquipmentError } = await supabase.from("job_equipment").insert({
+      organisation_id: profile.organisation_id,
+      job_id: job.id,
+      equipment_id: equipmentId
+    });
+
+    if (jobEquipmentError) {
+      redirect(`/maintenance?error=${encodeURIComponent(jobEquipmentError.code ?? "job-equipment-create-failed")}`);
+    }
   }
 
   revalidatePath("/maintenance");

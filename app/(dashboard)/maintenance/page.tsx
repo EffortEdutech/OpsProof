@@ -74,12 +74,18 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
   const [
     { data: clients },
     { data: sites },
+    { data: equipment },
     { data: technicians },
     { data: jobs, error: jobsError },
     { data: reports, error: reportsError }
   ] = await Promise.all([
     supabase.from("clients").select("id,name").eq("active", true).order("name", { ascending: true }),
     supabase.from("sites").select("id,name,client_id").eq("active", true).order("name", { ascending: true }),
+    supabase
+      .from("equipment")
+      .select("id,asset_code,location_description,status,buildings(name,site_id,sites(name,clients(name))),equipment_types(name,code)")
+      .eq("status", "ACTIVE")
+      .order("asset_code", { ascending: true }),
     supabase
       .from("profiles")
       .select("id,full_name")
@@ -104,15 +110,29 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           .select("id,job_id,severity,status")
           .in("job_id", jobIds)
       : { data: [], error: null };
+  const { data: jobEquipment, error: jobEquipmentError } =
+    jobIds.length > 0
+      ? await supabase
+          .from("job_equipment")
+          .select("id,job_id,status,equipment(asset_code,location_description,equipment_types(name,code))")
+          .in("job_id", jobIds)
+          .order("created_at", { ascending: true })
+      : { data: [], error: null };
 
   const hasSetup = Boolean(clients?.length && sites?.length);
   const techniciansById = new Map(technicians?.map((technician) => [technician.id, technician.full_name]) ?? []);
   const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
+  const equipmentByJobId = new Map<string, NonNullable<typeof jobEquipment>>();
   const reportsByJobId = new Map<string, NonNullable<typeof reports>[number]>();
 
   findings?.forEach((finding) => {
     const current = findingsByJobId.get(finding.job_id) ?? [];
     findingsByJobId.set(finding.job_id, [...current, finding]);
+  });
+
+  jobEquipment?.forEach((asset) => {
+    const current = equipmentByJobId.get(asset.job_id) ?? [];
+    equipmentByJobId.set(asset.job_id, [...current, asset]);
   });
 
   reports?.forEach((report) => {
@@ -149,6 +169,8 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 ? "Choose a submitted job to review."
                 : params.error === "missing-issued-report"
                   ? "Only jobs with issued reports can be closed this way."
+                    : params.error === "equipment-site-mismatch"
+                      ? "The selected asset must belong to the selected site."
                 : "The maintenance job could not be saved."
           }
         />
@@ -188,6 +210,14 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 </option>
               ))}
             </select>
+            <select aria-label="Assigned asset" disabled={!hasSetup || !equipment?.length} name="equipment_id" style={fieldStyle}>
+              <option value="">{equipment?.length ? "Optional asset" : "Register an asset first"}</option>
+              {equipment?.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.asset_code} - {asset.equipment_types?.name ?? "Asset"} / {asset.buildings?.sites?.name ?? "Site"}
+                </option>
+              ))}
+            </select>
             <input aria-label="Custom interval days" disabled={!hasSetup} min={1} name="interval_days" placeholder="Custom interval days" style={fieldStyle} type="number" />
             <input aria-label="Plan start date" disabled={!hasSetup} name="start_date" required style={fieldStyle} type="date" />
             <input aria-label="First scheduled date" disabled={!hasSetup} name="scheduled_date" required style={fieldStyle} type="date" />
@@ -200,7 +230,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           </div>
         </form>
       </Card>
-      {jobsError || reportsError || findingsError ? (
+      {jobsError || reportsError || findingsError || jobEquipmentError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <Card style={{ padding: 0, overflowX: "auto" }}>
@@ -216,6 +246,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Completed</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assets</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Review</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
@@ -225,6 +256,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               {jobs.map((job) => {
                 const report = reportsByJobId.get(job.id);
                 const jobFindings = findingsByJobId.get(job.id) ?? [];
+                const jobAssets = equipmentByJobId.get(job.id) ?? [];
                 const criticalFindings = jobFindings.filter((finding) => finding.severity === "CRITICAL").length;
 
                 return (
@@ -249,6 +281,20 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
+                    </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                      {jobAssets.length > 0 ? (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <strong>{jobAssets.length} asset{jobAssets.length === 1 ? "" : "s"}</strong>
+                          {jobAssets.slice(0, 2).map((asset) => (
+                            <span key={asset.id} style={{ color: "var(--muted)" }}>
+                              {asset.equipment?.asset_code ?? "Asset"}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "No assets"
+                      )}
                     </td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {jobFindings.length > 0 ? (

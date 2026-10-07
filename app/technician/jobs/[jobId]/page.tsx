@@ -87,11 +87,18 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
     notFound();
   }
 
-  const { data: findings, error: findingsError } = await supabase
+  const [{ data: findings, error: findingsError }, { data: jobEquipment, error: jobEquipmentError }] = await Promise.all([
+    supabase
     .from("findings")
-    .select("id,title,severity,status,description,recommendation,created_at")
+      .select("id,title,severity,status,description,recommendation,created_at,equipment(asset_code)")
     .eq("job_id", job.id)
-    .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("job_equipment")
+      .select("id,equipment_id,status,equipment(asset_code,location_description,equipment_types(name,code))")
+      .eq("job_id", job.id)
+      .order("created_at", { ascending: true })
+  ]);
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -134,8 +141,32 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           <Field label="Scheduled" value={job.scheduled_date} />
           <Field label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
           <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
+          <Field label="Assets" value={`${jobEquipment?.length ?? 0}`} />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
         </div>
+      </Card>
+
+      <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
+        {jobEquipmentError ? (
+          <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
+        ) : jobEquipment && jobEquipment.length > 0 ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {jobEquipment.map((asset) => (
+              <div key={asset.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center" }}>
+                <div>
+                  <strong>{asset.equipment?.asset_code ?? "Asset"}</strong>
+                  <div style={{ color: "var(--muted)", marginTop: 4 }}>
+                    {asset.equipment?.equipment_types?.name ?? "Equipment"} / {asset.equipment?.location_description ?? "Location not set"}
+                  </div>
+                </div>
+                <StatusBadge>{asset.status}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No assets assigned" message="Management can attach assets when scheduling the job." />
+        )}
       </Card>
 
       <Card>
@@ -166,6 +197,14 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           <input name="next" type="hidden" value={next} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <input aria-label="Finding title" disabled={job.status !== "IN_PROGRESS"} name="title" placeholder="Finding title" required style={fieldStyle} />
+            <select aria-label="Assigned asset" disabled={job.status !== "IN_PROGRESS" || !jobEquipment?.length} name="equipment_id" style={fieldStyle}>
+              <option value="">{jobEquipment?.length ? "Optional assigned asset" : "No assets assigned"}</option>
+              {jobEquipment?.map((asset) => (
+                <option key={asset.id} value={asset.equipment_id}>
+                  {asset.equipment?.asset_code ?? "Asset"} - {asset.equipment?.equipment_types?.name ?? "Equipment"}
+                </option>
+              ))}
+            </select>
             <select aria-label="Severity" disabled={job.status !== "IN_PROGRESS"} name="severity" style={fieldStyle}>
               <option value="OBSERVATION">Observation</option>
               <option value="LOW">Low</option>
@@ -202,6 +241,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                   <StatusBadge>{finding.severity}</StatusBadge>
                 </div>
                 <div style={{ color: "var(--muted)", marginTop: 4 }}>{finding.status} / {formatDate(finding.created_at)}</div>
+                {finding.equipment?.asset_code ? <div style={{ color: "var(--muted)", marginTop: 4 }}>Asset: {finding.equipment.asset_code}</div> : null}
                 {finding.description ? <div style={{ marginTop: 8 }}>{finding.description}</div> : null}
                 {finding.recommendation ? <div style={{ color: "var(--muted)", marginTop: 8 }}>Recommendation: {finding.recommendation}</div> : null}
               </div>

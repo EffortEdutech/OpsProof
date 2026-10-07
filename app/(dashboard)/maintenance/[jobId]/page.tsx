@@ -79,13 +79,13 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     notFound();
   }
 
-  const [{ data: technician }, { data: findings }, { data: reports }] = await Promise.all([
+  const [{ data: technician }, { data: findings }, { data: reports }, { data: jobEquipment, error: jobEquipmentError }] = await Promise.all([
     job.assigned_technician_id
       ? supabase.from("profiles").select("full_name").eq("id", job.assigned_technician_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase
       .from("findings")
-      .select("id,title,severity,status,description,recommendation,created_at")
+      .select("id,title,severity,status,description,recommendation,created_at,equipment(asset_code)")
       .eq("job_id", job.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -93,7 +93,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       .select("id,report_number,title,status,generated_at,issued_at")
       .eq("job_id", job.id)
       .neq("status", "VOID")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("job_equipment")
+      .select("id,equipment_id,status,equipment(asset_code,location_description,equipment_types(name,code))")
+      .eq("job_id", job.id)
+      .order("created_at", { ascending: true })
   ]);
 
   const issuedReport = reports?.find((report) => report.status === "ISSUED");
@@ -120,6 +125,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
           <Field label="Scheduled" value={job.scheduled_date} />
           <Field label="Completed" value={formatDate(job.completed_at)} />
+          <Field label="Assets" value={`${jobEquipment?.length ?? 0}`} />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
           <Field label="Report" value={reports?.[0]?.report_number ?? "No report"} />
           <Field label="Issued" value={formatDate(issuedReport?.issued_at ?? null)} />
@@ -150,6 +156,29 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Card>
 
       <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
+        {jobEquipmentError ? (
+          <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
+        ) : jobEquipment && jobEquipment.length > 0 ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {jobEquipment.map((asset) => (
+              <div key={asset.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center" }}>
+                <div>
+                  <strong>{asset.equipment?.asset_code ?? "Asset"}</strong>
+                  <div style={{ color: "var(--muted)", marginTop: 4 }}>
+                    {asset.equipment?.equipment_types?.name ?? "Equipment"} / {asset.equipment?.location_description ?? "Location not set"}
+                  </div>
+                </div>
+                <StatusBadge>{asset.status}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No assets assigned" message="Attach an asset when creating the next maintenance job." />
+        )}
+      </Card>
+
+      <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field evidence</h2>
         {findings && findings.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
@@ -160,6 +189,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   <StatusBadge>{finding.severity}</StatusBadge>
                 </div>
                 <div style={{ color: "var(--muted)", marginTop: 4 }}>{finding.status} / {formatDate(finding.created_at)}</div>
+                {finding.equipment?.asset_code ? <div style={{ color: "var(--muted)", marginTop: 4 }}>Asset: {finding.equipment.asset_code}</div> : null}
                 {finding.description ? <div style={{ marginTop: 8 }}>{finding.description}</div> : null}
                 {finding.recommendation ? <div style={{ color: "var(--muted)", marginTop: 8 }}>Recommendation: {finding.recommendation}</div> : null}
               </div>
