@@ -80,3 +80,38 @@ export async function createPlanAndJob(formData: FormData) {
   revalidatePath("/dashboard");
   redirect("/maintenance?created=1");
 }
+
+export async function startJobReview(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessManagement(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const jobId = value(formData, "job_id");
+
+  if (!jobId) {
+    redirect("/maintenance?error=missing-job");
+  }
+
+  const supabase = await createClient();
+  const { data: reviewedJob, error } = await supabase
+    .from("maintenance_jobs")
+    .update({
+      status: "UNDER_REVIEW",
+      supervisor_id: profile.id
+    })
+    .eq("id", jobId)
+    .eq("status", "SUBMITTED")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !reviewedJob) {
+    redirect(`/maintenance?error=${encodeURIComponent(error?.code ?? "review-start-failed")}`);
+  }
+
+  revalidatePath("/maintenance");
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/maintenance?review=1");
+}

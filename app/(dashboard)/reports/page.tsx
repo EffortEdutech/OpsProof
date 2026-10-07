@@ -38,7 +38,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     supabase
       .from("maintenance_jobs")
       .select("id,job_number,scheduled_date,clients(name),sites(name)")
-      .eq("status", "SUBMITTED")
+      .eq("status", "UNDER_REVIEW")
       .order("scheduled_date", { ascending: false }),
     supabase
       .from("reports")
@@ -90,8 +90,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           message={
             params.error === "missing-job"
               ? "Choose a submitted maintenance job."
-              : params.error === "job-not-submitted"
-                ? "Only submitted jobs can be converted into reports."
+              : params.error === "job-not-under-review"
+                ? "Start management review before generating a report."
                 : params.error === "report-exists"
                   ? "That job already has a report."
                   : "The report shell could not be created."
@@ -102,7 +102,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <form action={generateReportShell} style={{ display: "grid", gap: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
             <select aria-label="Maintenance job" disabled={!hasJobs} name="job_id" required style={fieldStyle}>
-              <option value="">{hasJobs ? "Select submitted job" : "No submitted jobs ready for report"}</option>
+              <option value="">{hasJobs ? "Select job under review" : "No reviewed jobs ready for report"}</option>
               {reportableJobs.map((job) => (
                 <option key={job.id} value={job.id}>
                   {job.job_number} - {job.clients?.name ?? "Client"} / {job.sites?.name ?? "Site"}

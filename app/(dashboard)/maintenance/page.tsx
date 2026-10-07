@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createPlanAndJob } from "@/app/(dashboard)/maintenance/actions";
+import { createPlanAndJob, startJobReview } from "@/app/(dashboard)/maintenance/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,6 +12,7 @@ type MaintenancePageProps = {
   searchParams?: Promise<{
     created?: string;
     error?: string;
+    review?: string;
   }>;
 };
 
@@ -51,10 +52,21 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
           Maintenance plan and job created.
         </Card>
       ) : null}
+      {params?.review ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Job moved under management review.
+        </Card>
+      ) : null}
       {params?.error ? (
         <ErrorState
           title="Maintenance job not saved"
-          message={params.error === "missing-required" ? "Choose a client, site, frequency, and dates." : "The maintenance job could not be saved."}
+          message={
+            params.error === "missing-required"
+              ? "Choose a client, site, frequency, and dates."
+              : params.error === "missing-job"
+                ? "Choose a submitted job to review."
+                : "The maintenance job could not be saved."
+          }
         />
       ) : null}
       <Card>
@@ -130,7 +142,16 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
-                    {job.status === "SUBMITTED" ? "Ready for report" : "Not ready"}
+                    {job.status === "SUBMITTED" ? (
+                      <form action={startJobReview}>
+                        <input name="job_id" type="hidden" value={job.id} />
+                        <Button type="submit" variant="secondary">
+                          Start Review
+                        </Button>
+                      </form>
+                    ) : null}
+                    {job.status === "UNDER_REVIEW" ? "Ready for report" : null}
+                    {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" ? "Not ready" : null}
                   </td>
                 </tr>
               ))}

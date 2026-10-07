@@ -36,8 +36,8 @@ export async function generateReportShell(formData: FormData) {
     redirect("/reports?error=job-not-found");
   }
 
-  if (job.status !== "SUBMITTED") {
-    redirect("/reports?error=job-not-submitted");
+  if (job.status !== "UNDER_REVIEW") {
+    redirect("/reports?error=job-not-under-review");
   }
 
   const { count: existingReportCount, error: existingReportError } = await supabase

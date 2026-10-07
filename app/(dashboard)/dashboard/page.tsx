@@ -19,6 +19,10 @@ export default async function DashboardPage() {
     .from("maintenance_jobs")
     .select("id", { count: "exact", head: true })
     .eq("status", "SUBMITTED");
+  const { count: underReviewJobCount } = await supabase
+    .from("maintenance_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "UNDER_REVIEW");
   const { count: reportCount } = await supabase
     .from("reports")
     .select("id", { count: "exact", head: true });
@@ -40,8 +44,12 @@ export default async function DashboardPage() {
           <strong style={{ display: "block", fontSize: "2rem", marginTop: 8 }}>{scheduledJobCount ?? 0}</strong>
         </Card>
         <Card>
-          <div style={{ color: "var(--muted)" }}>Ready for Report</div>
+          <div style={{ color: "var(--muted)" }}>Awaiting Review</div>
           <strong style={{ display: "block", fontSize: "2rem", marginTop: 8 }}>{submittedJobCount ?? 0}</strong>
+        </Card>
+        <Card>
+          <div style={{ color: "var(--muted)" }}>Ready for Report</div>
+          <strong style={{ display: "block", fontSize: "2rem", marginTop: 8 }}>{underReviewJobCount ?? 0}</strong>
         </Card>
         <Card>
           <div style={{ color: "var(--muted)" }}>Reports</div>
