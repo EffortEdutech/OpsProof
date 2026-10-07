@@ -94,10 +94,12 @@ export async function addFinding(formData: FormData) {
     .from("maintenance_jobs")
     .select("id,organisation_id")
     .eq("id", jobId)
+    .eq("assigned_technician_id", profile.id)
+    .eq("status", "IN_PROGRESS")
     .single();
 
   if (jobError || !job) {
-    redirect("/technician/today?error=job-not-found");
+    redirect("/technician/today?error=job-not-started");
   }
 
   const { error } = await supabase.from("findings").insert({

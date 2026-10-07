@@ -45,7 +45,17 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       .order("created_at", { ascending: false })
   ]);
 
-  const activeJobId = jobs?.find((job) => job.status === "IN_PROGRESS")?.id ?? jobs?.find((job) => job.status === "SCHEDULED")?.id;
+  const inProgressJobs = jobs?.filter((job) => job.status === "IN_PROGRESS") ?? [];
+  const findingsByJobId = new Map<string, number>();
+
+  findings?.forEach((finding) => {
+    const jobNumber = finding.maintenance_jobs?.job_number;
+    const job = jobs?.find((item) => item.job_number === jobNumber);
+
+    if (job) {
+      findingsByJobId.set(job.id, (findingsByJobId.get(job.id) ?? 0) + 1);
+    }
+  });
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -67,7 +77,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       ) : null}
       {params?.error ? (
         <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
-          Field action failed.
+          {params.error === "job-not-started" ? "Start the job before capturing findings." : "Field action failed."}
         </Card>
       ) : null}
       {jobsError ? (
@@ -82,6 +92,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Findings</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
               </tr>
             </thead>
@@ -95,6 +106,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.status}</td>
+                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
                   <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                     {job.status === "SCHEDULED" ? (
                       <form action={startJob}>
@@ -127,25 +139,32 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       )}
       <Card>
         <form action={addFinding} style={{ display: "grid", gap: "1rem" }}>
-          <input name="job_id" type="hidden" value={activeJobId ?? ""} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
-            <input aria-label="Finding title" disabled={!activeJobId} name="title" placeholder="Finding title" required style={fieldStyle} />
-            <select aria-label="Severity" disabled={!activeJobId} name="severity" style={fieldStyle}>
+            <select aria-label="In-progress job" disabled={inProgressJobs.length === 0} name="job_id" required style={fieldStyle}>
+              <option value="">{inProgressJobs.length > 0 ? "Select in-progress job" : "Start a job first"}</option>
+              {inProgressJobs.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.job_number} - {job.clients?.name ?? "Client"} / {job.sites?.name ?? "Site"}
+                </option>
+              ))}
+            </select>
+            <input aria-label="Finding title" disabled={inProgressJobs.length === 0} name="title" placeholder="Finding title" required style={fieldStyle} />
+            <select aria-label="Severity" disabled={inProgressJobs.length === 0} name="severity" style={fieldStyle}>
               <option value="OBSERVATION">Observation</option>
               <option value="LOW">Low</option>
               <option value="MEDIUM">Medium</option>
               <option value="HIGH">High</option>
               <option value="CRITICAL">Critical</option>
             </select>
-            <input aria-label="Description" disabled={!activeJobId} name="description" placeholder="Description" style={fieldStyle} />
-            <input aria-label="Recommendation" disabled={!activeJobId} name="recommendation" placeholder="Recommendation" style={fieldStyle} />
+            <input aria-label="Description" disabled={inProgressJobs.length === 0} name="description" placeholder="Description" style={fieldStyle} />
+            <input aria-label="Recommendation" disabled={inProgressJobs.length === 0} name="recommendation" placeholder="Recommendation" style={fieldStyle} />
           </div>
           <div>
-            <Button disabled={!activeJobId} type="submit">
+            <Button disabled={inProgressJobs.length === 0} type="submit">
               Capture Finding
             </Button>
           </div>
-          {!activeJobId ? (
+          {inProgressJobs.length === 0 ? (
             <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
               Start a scheduled job before capturing findings. Submitted jobs are locked for management review.
             </div>
