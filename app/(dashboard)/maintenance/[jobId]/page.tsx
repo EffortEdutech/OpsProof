@@ -102,6 +102,43 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   ]);
 
   const issuedReport = reports?.find((report) => report.status === "ISSUED");
+  const jobEquipmentIds = jobEquipment?.map((asset) => asset.id) ?? [];
+  const { data: inspections, error: inspectionsError } =
+    jobEquipmentIds.length > 0
+      ? await supabase
+          .from("inspections")
+          .select("id,job_equipment_id,template_id,status,inspection_templates(name)")
+          .in("job_equipment_id", jobEquipmentIds)
+      : { data: [], error: null };
+  const inspectionIds = inspections?.map((inspection) => inspection.id) ?? [];
+  const templateIds = inspections?.map((inspection) => inspection.template_id) ?? [];
+  const [{ data: templateItems, error: templateItemsError }, { data: inspectionResults, error: resultsError }] = await Promise.all([
+    templateIds.length > 0
+      ? supabase
+          .from("inspection_template_items")
+          .select("id,template_id,prompt,sort_order")
+          .in("template_id", templateIds)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    inspectionIds.length > 0
+      ? supabase
+          .from("inspection_results")
+          .select("id,inspection_id,template_item_id,result_status")
+          .in("inspection_id", inspectionIds)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+  const assetById = new Map(jobEquipment?.map((asset) => [asset.id, asset]) ?? []);
+  const itemsByTemplateId = new Map<string, NonNullable<typeof templateItems>>();
+  const resultByInspectionAndItem = new Map<string, NonNullable<typeof inspectionResults>[number]>();
+
+  templateItems?.forEach((item) => {
+    const current = itemsByTemplateId.get(item.template_id) ?? [];
+    itemsByTemplateId.set(item.template_id, [...current, item]);
+  });
+
+  inspectionResults?.forEach((result) => {
+    resultByInspectionAndItem.set(`${result.inspection_id}:${result.template_item_id}`, result);
+  });
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -197,6 +234,43 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           </div>
         ) : (
           <EmptyState title="No findings captured" message="Technician evidence will appear here after field capture." />
+        )}
+      </Card>
+
+      <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Checklist evidence</h2>
+        {inspectionsError || templateItemsError || resultsError ? (
+          <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
+        ) : inspections && inspections.length > 0 ? (
+          <div style={{ display: "grid", gap: "1rem" }}>
+            {inspections.map((inspection) => {
+              const asset = assetById.get(inspection.job_equipment_id);
+              const checklistItems = itemsByTemplateId.get(inspection.template_id) ?? [];
+
+              return (
+                <div key={inspection.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                    <strong>{asset?.equipment?.asset_code ?? "Asset"} / {inspection.inspection_templates?.name ?? "Checklist"}</strong>
+                    <StatusBadge>{inspection.status}</StatusBadge>
+                  </div>
+                  <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                    {checklistItems.map((item) => {
+                      const result = resultByInspectionAndItem.get(`${inspection.id}:${item.id}`);
+
+                      return (
+                        <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
+                          <span>{item.prompt}</span>
+                          <strong>{result?.result_status ?? "Not answered"}</strong>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState title="No checklist evidence" message="Structured checklist results will appear after technician inspection." />
         )}
       </Card>
 
