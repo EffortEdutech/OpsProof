@@ -160,6 +160,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const completedAssetCount = jobEquipment?.filter((asset) => asset.status === "COMPLETED").length ?? 0;
   const assignedAssetCount = jobEquipment?.length ?? 0;
   const assignedAssetChecklistsComplete = assignedAssetCount === 0 || completedAssetCount === assignedAssetCount;
+  const checklistProgress =
+    assignedAssetCount > 0
+      ? `${completedAssetCount}/${assignedAssetCount} checklist complete`
+      : "No assets assigned";
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -191,6 +195,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 : "0"
             }
           />
+          <Field label="Checklist" value={checklistProgress} />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
           <Field label="Report" value={reports?.[0]?.report_number ?? "No report"} />
           <Field label="Issued" value={formatDate(issuedReport?.issued_at ?? null)} />
@@ -198,41 +203,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Management action</h2>
-        {job.status === "SUBMITTED" ? (
-          assignedAssetChecklistsComplete ? (
-            <form action={startJobReview}>
-              <input name="job_id" type="hidden" value={job.id} />
-              <Button type="submit">Start Review</Button>
-            </form>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              <Button disabled type="button">
-                Start Review
-              </Button>
-              <div style={{ color: "#8a1f17" }}>
-                Complete assigned asset checklists before starting management review.
-              </div>
-            </div>
-          )
-        ) : null}
-        {job.status === "UNDER_REVIEW" ? <div>Ready for report generation from the Reports page.</div> : null}
-        {issuedReport && job.status !== "COMPLETED" ? (
-          <form action={closeJobFromIssuedReport}>
-            <input name="job_id" type="hidden" value={job.id} />
-            <Button type="submit" variant="secondary">
-              Close Job
-            </Button>
-          </form>
-        ) : null}
-        {job.status === "COMPLETED" ? <div>Job is closed after issued report delivery.</div> : null}
-        {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" && !issuedReport ? (
-          <div style={{ color: "var(--muted)" }}>No management action is available for this job state.</div>
-        ) : null}
-      </Card>
-
-      <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>1. Assigned assets</h2>
         {jobEquipmentError ? (
           <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
         ) : jobEquipment && jobEquipment.length > 0 ? (
@@ -255,7 +226,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field evidence</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>2. Field evidence</h2>
         {findings && findings.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             {findings.map((finding) => (
@@ -277,7 +248,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Checklist evidence</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>3. Checklist evidence</h2>
         {inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
         ) : (
@@ -290,7 +261,46 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Reports</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>4. Management action</h2>
+        {job.status === "SUBMITTED" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Start management review after confirming field evidence and checklist evidence.
+            </div>
+            {assignedAssetChecklistsComplete ? (
+              <form action={startJobReview}>
+                <input name="job_id" type="hidden" value={job.id} />
+                <Button type="submit">Start Review</Button>
+              </form>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                <Button disabled type="button">
+                  Start Review
+                </Button>
+                <div style={{ color: "#8a1f17" }}>
+                  Complete assigned asset checklists before starting management review.
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+        {job.status === "UNDER_REVIEW" ? <div>Ready for report generation from the Reports page.</div> : null}
+        {issuedReport && job.status !== "COMPLETED" ? (
+          <form action={closeJobFromIssuedReport}>
+            <input name="job_id" type="hidden" value={job.id} />
+            <Button type="submit" variant="secondary">
+              Close Job
+            </Button>
+          </form>
+        ) : null}
+        {job.status === "COMPLETED" ? <div>Job is closed after issued report delivery.</div> : null}
+        {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" && !issuedReport ? (
+          <div style={{ color: "var(--muted)" }}>No management action is available for this job state.</div>
+        ) : null}
+      </Card>
+
+      <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>5. Reports</h2>
         {reports && reports.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             {reports.map((report) => (
