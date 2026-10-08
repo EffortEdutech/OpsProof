@@ -46,6 +46,18 @@ export async function createBuildingRecord(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const { data: site, error: siteError } = await supabase
+    .from("sites")
+    .select("id")
+    .eq("id", siteId)
+    .eq("organisation_id", profile.organisation_id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (siteError || !site) {
+    redirect("/equipment?error=site-mismatch");
+  }
+
   const { error } = await supabase.from("buildings").insert({
     organisation_id: profile.organisation_id,
     site_id: siteId,
@@ -79,6 +91,18 @@ export async function createSystemRecord(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const { data: building, error: buildingError } = await supabase
+    .from("buildings")
+    .select("id")
+    .eq("id", buildingId)
+    .eq("organisation_id", profile.organisation_id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (buildingError || !building) {
+    redirect("/equipment?error=building-mismatch");
+  }
+
   const { error } = await supabase.from("systems").insert({
     organisation_id: profile.organisation_id,
     building_id: buildingId,
@@ -106,16 +130,44 @@ export async function createEquipmentRecord(formData: FormData) {
   const buildingId = value(formData, "building_id");
   const equipmentTypeId = value(formData, "equipment_type_id");
   const assetCode = value(formData, "asset_code");
+  const systemId = value(formData, "system_id");
 
   if (!buildingId || !equipmentTypeId || !assetCode) {
     redirect("/equipment?error=missing-equipment");
   }
 
   const supabase = await createClient();
+  const [{ data: building, error: buildingError }, { data: system, error: systemError }] = await Promise.all([
+    supabase
+      .from("buildings")
+      .select("id")
+      .eq("id", buildingId)
+      .eq("organisation_id", profile.organisation_id)
+      .eq("active", true)
+      .maybeSingle(),
+    systemId
+      ? supabase
+          .from("systems")
+          .select("id,building_id")
+          .eq("id", systemId)
+          .eq("organisation_id", profile.organisation_id)
+          .eq("active", true)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+  ]);
+
+  if (buildingError || !building) {
+    redirect("/equipment?error=building-mismatch");
+  }
+
+  if (systemError || (systemId && system?.building_id !== buildingId)) {
+    redirect("/equipment?error=system-building-mismatch");
+  }
+
   const { error } = await supabase.from("equipment").insert({
     organisation_id: profile.organisation_id,
     building_id: buildingId,
-    system_id: value(formData, "system_id"),
+    system_id: systemId,
     equipment_type_id: equipmentTypeId,
     asset_code: assetCode,
     serial_number: value(formData, "serial_number"),

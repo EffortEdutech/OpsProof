@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createBuildingRecord, createEquipmentRecord, createSystemRecord } from "@/app/(dashboard)/equipment/actions";
-import { Button } from "@/components/ui/button";
+import { EquipmentForms } from "@/app/(dashboard)/equipment/equipment-forms";
 import { Card } from "@/components/ui/card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,23 +16,6 @@ type EquipmentPageProps = {
     system?: string;
   }>;
 };
-
-const fieldStyle = {
-  minHeight: 44,
-  border: "1px solid var(--border)",
-  borderRadius: 6,
-  padding: 12
-};
-
-const systemTypes = [
-  ["FIRE_ALARM", "Fire alarm"],
-  ["FIRE_EXTINGUISHING", "Fire extinguishing"],
-  ["HOSE_REEL", "Hose reel"],
-  ["SPRINKLER", "Sprinkler"],
-  ["EMERGENCY_LIGHTING", "Emergency lighting"],
-  ["EXIT_SIGNAGE", "Exit signage"],
-  ["OTHER", "Other"]
-];
 
 const statusLabel = {
   ACTIVE: "Active",
@@ -58,7 +41,7 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
   ] = await Promise.all([
     supabase.from("sites").select("id,name,clients(name)").eq("active", true).order("name", { ascending: true }),
     supabase.from("buildings").select("id,name,code,active,sites(name,clients(name))").eq("active", true).order("name", { ascending: true }),
-    supabase.from("systems").select("id,name,code,system_type,active,buildings(name,sites(name))").eq("active", true).order("name", { ascending: true }),
+    supabase.from("systems").select("id,building_id,name,code,system_type,active,buildings(name,sites(name))").eq("active", true).order("name", { ascending: true }),
     supabase.from("equipment_types").select("id,name,code,system_type").or(`organisation_id.is.null,organisation_id.eq.${profile.organisation_id}`).eq("active", true).order("name", { ascending: true }),
     supabase
       .from("equipment")
@@ -66,10 +49,28 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
       .order("created_at", { ascending: false })
   ]);
 
-  const hasSites = Boolean(sites?.length);
-  const hasBuildings = Boolean(buildings?.length);
-  const hasEquipmentTypes = Boolean(equipmentTypes?.length);
-  const canCreateEquipment = hasBuildings && hasEquipmentTypes;
+  const siteOptions =
+    sites?.map((site) => ({
+      id: site.id,
+      name: site.name,
+      clientName: site.clients?.name ?? "Client"
+    })) ?? [];
+  const buildingOptions =
+    buildings?.map((building) => ({
+      id: building.id,
+      name: building.name,
+      siteName: building.sites?.name ?? "Site",
+      clientName: building.sites?.clients?.name ?? "Client"
+    })) ?? [];
+  const systemOptions =
+    systems?.map((system) => ({
+      id: system.id,
+      buildingId: system.building_id,
+      name: system.name,
+      buildingName: system.buildings?.name ?? "Building"
+    })) ?? [];
+  const equipmentTypeOptions =
+    equipmentTypes?.map((type) => ({ id: type.id, name: type.name, code: type.code })) ?? [];
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -99,6 +100,12 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
                 ? "Choose a building, system type, and system name."
                 : params.error === "missing-equipment"
                   ? "Choose a building, equipment type, and asset code."
+                    : params.error === "site-mismatch"
+                      ? "Choose an active site from your organisation."
+                      : params.error === "building-mismatch"
+                        ? "Choose an active building from your organisation."
+                        : params.error === "system-building-mismatch"
+                          ? "Choose a system that belongs to the selected building."
                   : "The register item could not be saved."
           }
         />
@@ -108,103 +115,15 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
       ) : null}
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Create building</h2>
-        <form action={createBuildingRecord} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-            <select aria-label="Site" disabled={!hasSites} name="site_id" required style={fieldStyle}>
-              <option value="">{hasSites ? "Select site" : "Create a site first"}</option>
-              {sites?.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name} - {site.clients?.name ?? "Client"}
-                </option>
-              ))}
-            </select>
-            <input aria-label="Building name" disabled={!hasSites} name="name" placeholder="Building name" required style={fieldStyle} />
-            <input aria-label="Building code" disabled={!hasSites} name="code" placeholder="Building code" style={fieldStyle} />
-            <input aria-label="Floors" disabled={!hasSites} min={1} name="floors" placeholder="Floors" style={fieldStyle} type="number" />
-            <input aria-label="Building description" disabled={!hasSites} name="description" placeholder="Description" style={fieldStyle} />
-          </div>
-          <div>
-            <Button disabled={!hasSites} type="submit">
-              Create Building
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Create system</h2>
-        <form action={createSystemRecord} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-            <select aria-label="Building" disabled={!hasBuildings} name="building_id" required style={fieldStyle}>
-              <option value="">{hasBuildings ? "Select building" : "Create a building first"}</option>
-              {buildings?.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name} - {building.sites?.name ?? "Site"}
-                </option>
-              ))}
-            </select>
-            <select aria-label="System type" disabled={!hasBuildings} name="system_type" required style={fieldStyle}>
-              {systemTypes.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <input aria-label="System name" disabled={!hasBuildings} name="name" placeholder="System name" required style={fieldStyle} />
-            <input aria-label="System code" disabled={!hasBuildings} name="code" placeholder="System code" style={fieldStyle} />
-            <input aria-label="System description" disabled={!hasBuildings} name="description" placeholder="Description" style={fieldStyle} />
-          </div>
-          <div>
-            <Button disabled={!hasBuildings} type="submit">
-              Create System
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Register equipment</h2>
-        <form action={createEquipmentRecord} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-            <select aria-label="Equipment building" disabled={!canCreateEquipment} name="building_id" required style={fieldStyle}>
-              <option value="">{hasBuildings ? "Select building" : "Create a building first"}</option>
-              {buildings?.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name} - {building.sites?.name ?? "Site"}
-                </option>
-              ))}
-            </select>
-            <select aria-label="System" disabled={!canCreateEquipment} name="system_id" style={fieldStyle}>
-              <option value="">No system selected</option>
-              {systems?.map((system) => (
-                <option key={system.id} value={system.id}>
-                  {system.name} - {system.buildings?.name ?? "Building"}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Equipment type" disabled={!canCreateEquipment} name="equipment_type_id" required style={fieldStyle}>
-              <option value="">{hasEquipmentTypes ? "Select equipment type" : "Seed equipment types first"}</option>
-              {equipmentTypes?.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name} ({type.code})
-                </option>
-              ))}
-            </select>
-            <input aria-label="Asset code" disabled={!canCreateEquipment} name="asset_code" placeholder="Asset code" required style={fieldStyle} />
-            <input aria-label="Serial number" disabled={!canCreateEquipment} name="serial_number" placeholder="Serial number" style={fieldStyle} />
-            <input aria-label="Brand" disabled={!canCreateEquipment} name="brand" placeholder="Brand" style={fieldStyle} />
-            <input aria-label="Model" disabled={!canCreateEquipment} name="model" placeholder="Model" style={fieldStyle} />
-            <input aria-label="Capacity" disabled={!canCreateEquipment} name="capacity" placeholder="Capacity" style={fieldStyle} />
-            <input aria-label="Location description" disabled={!canCreateEquipment} name="location_description" placeholder="Location" style={fieldStyle} />
-            <input aria-label="Installation date" disabled={!canCreateEquipment} name="installation_date" style={fieldStyle} type="date" />
-          </div>
-          <div>
-            <Button disabled={!canCreateEquipment} type="submit">
-              Register Equipment
-            </Button>
-          </div>
-        </form>
+        <EquipmentForms
+          buildings={buildingOptions}
+          createBuildingAction={createBuildingRecord}
+          createEquipmentAction={createEquipmentRecord}
+          createSystemAction={createSystemRecord}
+          equipmentTypes={equipmentTypeOptions}
+          sites={siteOptions}
+          systems={systemOptions}
+        />
       </Card>
 
       {equipmentError ? (
