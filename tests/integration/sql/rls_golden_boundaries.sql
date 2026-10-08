@@ -20,11 +20,29 @@ values
   ('site_b', extensions.gen_random_uuid()),
   ('building_a', extensions.gen_random_uuid()),
   ('building_b', extensions.gen_random_uuid()),
+  ('equipment_type_a', extensions.gen_random_uuid()),
+  ('equipment_type_b', extensions.gen_random_uuid()),
+  ('equipment_a_issued', extensions.gen_random_uuid()),
+  ('equipment_a_generated', extensions.gen_random_uuid()),
+  ('equipment_b_issued', extensions.gen_random_uuid()),
+  ('template_a', extensions.gen_random_uuid()),
+  ('template_b', extensions.gen_random_uuid()),
+  ('template_item_a', extensions.gen_random_uuid()),
+  ('template_item_b', extensions.gen_random_uuid()),
   ('plan_a', extensions.gen_random_uuid()),
   ('plan_b', extensions.gen_random_uuid()),
   ('job_a_assigned', extensions.gen_random_uuid()),
   ('job_a_unassigned', extensions.gen_random_uuid()),
   ('job_b_assigned', extensions.gen_random_uuid()),
+  ('job_equipment_a_issued', extensions.gen_random_uuid()),
+  ('job_equipment_a_generated', extensions.gen_random_uuid()),
+  ('job_equipment_b_issued', extensions.gen_random_uuid()),
+  ('inspection_a_issued', extensions.gen_random_uuid()),
+  ('inspection_a_generated', extensions.gen_random_uuid()),
+  ('inspection_b_issued', extensions.gen_random_uuid()),
+  ('inspection_result_a_issued', extensions.gen_random_uuid()),
+  ('inspection_result_a_generated', extensions.gen_random_uuid()),
+  ('inspection_result_b_issued', extensions.gen_random_uuid()),
   ('finding_a_issued', extensions.gen_random_uuid()),
   ('finding_a_generated', extensions.gen_random_uuid()),
   ('finding_b_issued', extensions.gen_random_uuid()),
@@ -88,6 +106,27 @@ values
   ((select id from rls_ids where key='building_a'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='site_a'), 'RLS Building A', 'A'),
   ((select id from rls_ids where key='building_b'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='site_b'), 'RLS Building B', 'B');
 
+insert into public.equipment_types(id, organisation_id, name, code, system_type)
+values
+  ((select id from rls_ids where key='equipment_type_a'), (select id from rls_ids where key='org_a'), 'RLS Type A', 'RLS-TYPE-A', 'FIRE_EXTINGUISHING'),
+  ((select id from rls_ids where key='equipment_type_b'), (select id from rls_ids where key='org_b'), 'RLS Type B', 'RLS-TYPE-B', 'FIRE_EXTINGUISHING');
+
+insert into public.equipment(id, organisation_id, building_id, equipment_type_id, asset_code)
+values
+  ((select id from rls_ids where key='equipment_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='building_a'), (select id from rls_ids where key='equipment_type_a'), 'RLS-A-ASSET-ISSUED'),
+  ((select id from rls_ids where key='equipment_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='building_a'), (select id from rls_ids where key='equipment_type_a'), 'RLS-A-ASSET-GENERATED'),
+  ((select id from rls_ids where key='equipment_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='building_b'), (select id from rls_ids where key='equipment_type_b'), 'RLS-B-ASSET-ISSUED');
+
+insert into public.inspection_templates(id, organisation_id, equipment_type_id, name, code, version, status)
+values
+  ((select id from rls_ids where key='template_a'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='equipment_type_a'), 'RLS Template A', 'RLS-TEMPLATE-A', 1, 'ACTIVE'),
+  ((select id from rls_ids where key='template_b'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='equipment_type_b'), 'RLS Template B', 'RLS-TEMPLATE-B', 1, 'ACTIVE');
+
+insert into public.inspection_template_items(id, template_id, section, item_code, prompt, field_type, sort_order)
+values
+  ((select id from rls_ids where key='template_item_a'), (select id from rls_ids where key='template_a'), 'RLS', 'A-01', 'RLS Client A checklist item', 'PASS_FAIL', 10),
+  ((select id from rls_ids where key='template_item_b'), (select id from rls_ids where key='template_b'), 'RLS', 'B-01', 'RLS Client B checklist item', 'PASS_FAIL', 10);
+
 insert into public.maintenance_plans(id, organisation_id, client_id, site_id, name, frequency, start_date)
 values
   ((select id from rls_ids where key='plan_a'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='client_a'), (select id from rls_ids where key='site_a'), 'RLS Plan A', 'MONTHLY', current_date),
@@ -104,6 +143,24 @@ values
   ((select id from rls_ids where key='report_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), 'RLS-A-ISSUED', 'ISSUED'),
   ((select id from rls_ids where key='report_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_unassigned'), 'RLS-A-GENERATED', 'GENERATED'),
   ((select id from rls_ids where key='report_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='job_b_assigned'), 'RLS-B-ISSUED', 'ISSUED');
+
+insert into public.job_equipment(id, organisation_id, job_id, equipment_id, status)
+values
+  ((select id from rls_ids where key='job_equipment_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), (select id from rls_ids where key='equipment_a_issued'), 'COMPLETED'),
+  ((select id from rls_ids where key='job_equipment_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_unassigned'), (select id from rls_ids where key='equipment_a_generated'), 'COMPLETED'),
+  ((select id from rls_ids where key='job_equipment_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='job_b_assigned'), (select id from rls_ids where key='equipment_b_issued'), 'COMPLETED');
+
+insert into public.inspections(id, organisation_id, job_id, job_equipment_id, template_id, technician_id, status)
+values
+  ((select id from rls_ids where key='inspection_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_assigned'), (select id from rls_ids where key='job_equipment_a_issued'), (select id from rls_ids where key='template_a'), (select id from rls_ids where key='tech_a'), 'LOCKED'),
+  ((select id from rls_ids where key='inspection_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='job_a_unassigned'), (select id from rls_ids where key='job_equipment_a_generated'), (select id from rls_ids where key='template_a'), (select id from rls_ids where key='tech_a'), 'LOCKED'),
+  ((select id from rls_ids where key='inspection_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='job_b_assigned'), (select id from rls_ids where key='job_equipment_b_issued'), (select id from rls_ids where key='template_b'), (select id from rls_ids where key='tech_b'), 'LOCKED');
+
+insert into public.inspection_results(id, organisation_id, inspection_id, template_item_id, result_status)
+values
+  ((select id from rls_ids where key='inspection_result_a_issued'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='inspection_a_issued'), (select id from rls_ids where key='template_item_a'), 'PASS'),
+  ((select id from rls_ids where key='inspection_result_a_generated'), (select id from rls_ids where key='org_a'), (select id from rls_ids where key='inspection_a_generated'), (select id from rls_ids where key='template_item_a'), 'FAIL'),
+  ((select id from rls_ids where key='inspection_result_b_issued'), (select id from rls_ids where key='org_b'), (select id from rls_ids where key='inspection_b_issued'), (select id from rls_ids where key='template_item_b'), 'ATTENTION');
 
 insert into public.findings(id, organisation_id, job_id, title, severity, status)
 values
@@ -189,6 +246,14 @@ select
   'visible findings=' || coalesce(array_to_string(array_agg(title order by title), ','), '<none>')
 from public.findings;
 
+select pg_temp.as_user('client_user_a');
+insert into rls_results
+select
+  'client_a_sees_only_issued_report_checklist_results',
+  array_agg(result_status order by result_status) = array['PASS'::public.inspection_result_status],
+  'visible checklist results=' || coalesce(array_to_string(array_agg(result_status order by result_status), ','), '<none>')
+from public.inspection_results;
+
 select pg_temp.as_user('client_user_b');
 insert into rls_results
 select
@@ -204,6 +269,14 @@ select
   array_agg(title order by title) = array['RLS B Issued Finding'],
   'visible findings=' || coalesce(array_to_string(array_agg(title order by title), ','), '<none>')
 from public.findings;
+
+select pg_temp.as_user('client_user_b');
+insert into rls_results
+select
+  'client_b_cannot_see_client_a_checklist_results',
+  array_agg(result_status order by result_status) = array['ATTENTION'::public.inspection_result_status],
+  'visible checklist results=' || coalesce(array_to_string(array_agg(result_status order by result_status), ','), '<none>')
+from public.inspection_results;
 
 select pg_temp.as_user('client_user_a');
 with upd as (
