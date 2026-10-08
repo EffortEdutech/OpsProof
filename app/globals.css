@@ -43,6 +43,45 @@ td {
   vertical-align: top;
 }
 
+.table-scroll {
+  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.data-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  min-width: 1120px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.data-table a,
+.data-table strong,
+.data-table span {
+  overflow-wrap: anywhere;
+}
+
+.data-table button {
+  width: auto;
+}
+
 input,
 select {
   max-width: 100%;
@@ -55,6 +94,11 @@ select {
 
   table {
     min-width: 680px;
+  }
+
+  .data-table {
+    font-size: 0.8125rem;
+    min-width: 980px;
   }
 
   th,

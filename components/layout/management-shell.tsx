@@ -57,7 +57,7 @@ export function ManagementShell({ children, currentUser, title, description }: M
           </Button>
         </form>
       </aside>
-      <main style={{ display: "grid", alignContent: "start", gap: "1.5rem", padding: "2rem" }}>
+      <main style={{ display: "grid", alignContent: "start", gap: "1.5rem", minWidth: 0, padding: "2rem" }}>
         {title ? <PageHeader {...(description ? { description } : {})} title={title} /> : null}
         {children}
       </main>

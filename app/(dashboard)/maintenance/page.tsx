@@ -235,23 +235,38 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       {jobsError || reportsError || findingsError || jobEquipmentError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 120 }} />
+              <col style={{ width: 86 }} />
+              <col style={{ width: 92 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 104 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 112 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 132 }} />
+              <col style={{ width: 150 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assigned</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Plan</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Frequency</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Completed</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assets</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Review</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
+              <tr>
+                <th>Job</th>
+                <th>Client</th>
+                <th>Site</th>
+                <th>Assigned</th>
+                <th>Plan</th>
+                <th>Frequency</th>
+                <th>Scheduled</th>
+                <th>Completed</th>
+                <th>Status</th>
+                <th>Assets</th>
+                <th>Evidence</th>
+                <th>Review</th>
+                <th>Report</th>
               </tr>
             </thead>
             <tbody>
@@ -265,28 +280,28 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
 
                 return (
                   <tr key={job.id}>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       <Link href={`/maintenance/${job.id}`}>
                         <strong>{job.job_number}</strong>
                       </Link>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>{job.clients?.name ?? "Not set"}</td>
+                    <td>{job.sites?.name ?? "Not set"}</td>
+                    <td>
                       {job.assigned_technician_id ? techniciansById.get(job.assigned_technician_id) ?? "Assigned" : "Unassigned"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {job.maintenance_plans?.name ?? "Ad hoc"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {job.maintenance_plans?.frequency ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{job.scheduled_date}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td style={{ whiteSpace: "nowrap" }}>{job.scheduled_date}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{formatDate(job.completed_at)}</td>
+                    <td>
                       <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {jobAssets.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{jobAssets.length} asset{jobAssets.length === 1 ? "" : "s"}</strong>
@@ -303,7 +318,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                         "No assets"
                       )}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {jobFindings.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{jobFindings.length} finding{jobFindings.length === 1 ? "" : "s"}</strong>
@@ -313,7 +328,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                         "No findings"
                       )}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {job.status === "SUBMITTED" ? (
                         <div style={{ display: "grid", gap: 8 }}>
                           <span>Submitted for review</span>
@@ -341,7 +356,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                       ) : null}
                       {job.status !== "SUBMITTED" && job.status !== "UNDER_REVIEW" && job.status !== "COMPLETED" && report?.status !== "ISSUED" ? "Not ready" : null}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {report ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{report.report_number}</strong>
