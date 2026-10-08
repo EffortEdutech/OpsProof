@@ -129,37 +129,45 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
       {equipmentError ? (
         <ErrorState title="Equipment unavailable" message="The equipment list could not be loaded." />
       ) : equipment && equipment.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 160 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 160 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 180 }} />
+              <col style={{ width: 110 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Asset</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Type</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Building</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>System</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Location</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+              <tr>
+                <th>Asset</th>
+                <th>Type</th>
+                <th>Building</th>
+                <th>System</th>
+                <th>Location</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {equipment.map((asset) => (
                 <tr key={asset.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     <strong>{asset.asset_code}</strong>
                     <div style={{ color: "var(--muted)", marginTop: 4 }}>
                       {[asset.brand, asset.model, asset.capacity].filter(Boolean).join(" / ") || "Details not set"}
                     </div>
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     {asset.equipment_types?.name ?? "Not set"}
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     {asset.buildings?.name ?? "Not set"}
                     <div style={{ color: "var(--muted)", marginTop: 4 }}>{asset.buildings?.sites?.name ?? ""}</div>
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{asset.systems?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{asset.location_description ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{statusLabel[asset.status] ?? asset.status}</td>
+                  <td>{asset.systems?.name ?? "Not set"}</td>
+                  <td>{asset.location_description ?? "Not set"}</td>
+                  <td>{statusLabel[asset.status] ?? asset.status}</td>
                 </tr>
               ))}
             </tbody>
