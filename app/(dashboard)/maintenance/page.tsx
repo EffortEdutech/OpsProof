@@ -169,9 +169,11 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 ? "Choose a submitted job to review."
                 : params.error === "missing-issued-report"
                   ? "Only jobs with issued reports can be closed this way."
-                    : params.error === "equipment-site-mismatch"
-                      ? "The selected asset must belong to the selected site."
-                : "The maintenance job could not be saved."
+                  : params.error === "equipment-site-mismatch"
+                    ? "The selected asset must belong to the selected site."
+                    : params.error === "incomplete-checklists"
+                      ? "Complete assigned asset checklists before starting management review."
+                      : "The maintenance job could not be saved."
           }
         />
       ) : null}
@@ -258,6 +260,8 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                 const jobFindings = findingsByJobId.get(job.id) ?? [];
                 const jobAssets = equipmentByJobId.get(job.id) ?? [];
                 const criticalFindings = jobFindings.filter((finding) => finding.severity === "CRITICAL").length;
+                const completedAssets = jobAssets.filter((asset) => asset.status === "COMPLETED").length;
+                const assetChecklistsComplete = jobAssets.length === 0 || completedAssets === jobAssets.length;
 
                 return (
                   <tr key={job.id}>
@@ -286,6 +290,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                       {jobAssets.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{jobAssets.length} asset{jobAssets.length === 1 ? "" : "s"}</strong>
+                          <span style={{ color: assetChecklistsComplete ? "var(--muted)" : "#8a1f17" }}>
+                            {completedAssets}/{jobAssets.length} checklist complete
+                          </span>
                           {jobAssets.slice(0, 2).map((asset) => (
                             <span key={asset.id} style={{ color: "var(--muted)" }}>
                               {asset.equipment?.asset_code ?? "Asset"}
@@ -310,12 +317,16 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                       {job.status === "SUBMITTED" ? (
                         <div style={{ display: "grid", gap: 8 }}>
                           <span>Submitted for review</span>
-                          <form action={startJobReview}>
-                            <input name="job_id" type="hidden" value={job.id} />
-                            <Button type="submit" variant="secondary">
-                              Start Review
-                            </Button>
-                          </form>
+                          {assetChecklistsComplete ? (
+                            <form action={startJobReview}>
+                              <input name="job_id" type="hidden" value={job.id} />
+                              <Button type="submit" variant="secondary">
+                                Start Review
+                              </Button>
+                            </form>
+                          ) : (
+                            <span style={{ color: "#8a1f17" }}>Complete assigned asset checklists first</span>
+                          )}
                         </div>
                       ) : null}
                       {job.status === "UNDER_REVIEW" ? "Ready for report generation" : null}

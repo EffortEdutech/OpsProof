@@ -132,6 +132,21 @@ export async function startJobReview(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const { data: assignedAssets, error: assignedAssetsError } = await supabase
+    .from("job_equipment")
+    .select("id,status")
+    .eq("job_id", jobId);
+
+  if (assignedAssetsError) {
+    redirect(`/maintenance?error=${encodeURIComponent(assignedAssetsError.code ?? "asset-check-failed")}`);
+  }
+
+  const hasIncompleteChecklist = (assignedAssets ?? []).some((asset) => asset.status !== "COMPLETED");
+
+  if (hasIncompleteChecklist) {
+    redirect("/maintenance?error=incomplete-checklists");
+  }
+
   const { data: reviewedJob, error } = await supabase
     .from("maintenance_jobs")
     .update({

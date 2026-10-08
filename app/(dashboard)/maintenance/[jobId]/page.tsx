@@ -157,6 +157,9 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         }))
       };
     }) ?? [];
+  const completedAssetCount = jobEquipment?.filter((asset) => asset.status === "COMPLETED").length ?? 0;
+  const assignedAssetCount = jobEquipment?.length ?? 0;
+  const assignedAssetChecklistsComplete = assignedAssetCount === 0 || completedAssetCount === assignedAssetCount;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -180,7 +183,14 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
           <Field label="Scheduled" value={job.scheduled_date} />
           <Field label="Completed" value={formatDate(job.completed_at)} />
-          <Field label="Assets" value={`${jobEquipment?.length ?? 0}`} />
+          <Field
+            label="Assets"
+            value={
+              assignedAssetCount > 0
+                ? `${assignedAssetCount} assigned, ${completedAssetCount} checklist complete`
+                : "0"
+            }
+          />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
           <Field label="Report" value={reports?.[0]?.report_number ?? "No report"} />
           <Field label="Issued" value={formatDate(issuedReport?.issued_at ?? null)} />
@@ -190,10 +200,21 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Management action</h2>
         {job.status === "SUBMITTED" ? (
-          <form action={startJobReview}>
-            <input name="job_id" type="hidden" value={job.id} />
-            <Button type="submit">Start Review</Button>
-          </form>
+          assignedAssetChecklistsComplete ? (
+            <form action={startJobReview}>
+              <input name="job_id" type="hidden" value={job.id} />
+              <Button type="submit">Start Review</Button>
+            </form>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              <Button disabled type="button">
+                Start Review
+              </Button>
+              <div style={{ color: "#8a1f17" }}>
+                Complete assigned asset checklists before starting management review.
+              </div>
+            </div>
+          )
         ) : null}
         {job.status === "UNDER_REVIEW" ? <div>Ready for report generation from the Reports page.</div> : null}
         {issuedReport && job.status !== "COMPLETED" ? (
