@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { issueReport, reviewReport } from "@/app/(dashboard)/reports/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ChecklistResults } from "@/components/ui/checklist-results";
 import { PrintButton } from "@/components/ui/print-button";
 import { EmptyState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -118,6 +119,23 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
   inspectionResults?.forEach((result) => {
     resultByInspectionAndItem.set(`${result.inspection_id}:${result.template_item_id}`, result);
   });
+  const checklistGroups =
+    inspections?.map((inspection) => {
+      const asset = assetById.get(inspection.job_equipment_id);
+      const checklistItems = itemsByTemplateId.get(inspection.template_id) ?? [];
+
+      return {
+        id: inspection.id,
+        assetCode: asset?.equipment?.asset_code ?? "Asset",
+        checklistName: inspection.inspection_templates?.name ?? "Checklist",
+        status: inspection.status,
+        items: checklistItems.map((item) => ({
+          id: item.id,
+          prompt: item.prompt,
+          resultStatus: resultByInspectionAndItem.get(`${inspection.id}:${item.id}`)?.result_status ?? null
+        }))
+      };
+    }) ?? [];
 
   return (
     <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
@@ -199,36 +217,12 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Checklist results</h2>
         {inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
-        ) : inspections && inspections.length > 0 ? (
-          <div style={{ display: "grid", gap: "1rem" }}>
-            {inspections.map((inspection) => {
-              const asset = assetById.get(inspection.job_equipment_id);
-              const checklistItems = itemsByTemplateId.get(inspection.template_id) ?? [];
-
-              return (
-                <div key={inspection.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                    <strong>{asset?.equipment?.asset_code ?? "Asset"} / {inspection.inspection_templates?.name ?? "Checklist"}</strong>
-                    <StatusBadge>{inspection.status}</StatusBadge>
-                  </div>
-                  <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-                    {checklistItems.map((item) => {
-                      const result = resultByInspectionAndItem.get(`${inspection.id}:${item.id}`);
-
-                      return (
-                        <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
-                          <span>{item.prompt}</span>
-                          <strong>{result?.result_status ?? "Not answered"}</strong>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         ) : (
-          <EmptyState title="No checklist results" message="This report has no structured checklist results attached." />
+          <ChecklistResults
+            emptyTitle="No checklist results"
+            emptyMessage="This report has no structured checklist results attached."
+            groups={checklistGroups}
+          />
         )}
       </Card>
     </div>
