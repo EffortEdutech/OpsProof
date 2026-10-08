@@ -68,33 +68,40 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
         {error ? (
           <ErrorState title="Clients unavailable" message="The client list could not be loaded." />
         ) : clients && clients.length > 0 ? (
-          <Card style={{ padding: 0, overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <Card className="table-scroll" style={{ padding: 0 }}>
+            <table className="data-table">
+              <colgroup>
+                <col style={{ width: 180 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 190 }} />
+                <col style={{ width: 100 }} />
+              </colgroup>
               <thead>
-                <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                  <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
-                  <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Registration</th>
-                  <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Industry</th>
-                  <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Contact</th>
-                  <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+                <tr>
+                  <th>Client</th>
+                  <th>Registration</th>
+                  <th>Industry</th>
+                  <th>Contact</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {clients.map((client) => (
                   <tr key={client.id}>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       <strong>{client.name}</strong>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {client.registration_no ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {client.industry ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {client.email ?? client.phone ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {client.active ? "Active" : "Inactive"}
                     </td>
                   </tr>

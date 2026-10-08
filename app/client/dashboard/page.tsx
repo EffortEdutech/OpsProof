@@ -79,16 +79,24 @@ export default async function ClientDashboardPage() {
       ) : findingsError || jobEquipmentError || inspectionsError || resultsError ? (
         <EmptyState title="Evidence unavailable" message="Report evidence could not be loaded." />
       ) : reports && reports.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 220 }} />
+              <col style={{ width: 170 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 260 }} />
+              <col style={{ width: 100 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Report</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Title</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Evidence</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Issued</th>
+              <tr>
+                <th>Report</th>
+                <th>Title</th>
+                <th>Job</th>
+                <th>Site</th>
+                <th>Evidence</th>
+                <th>Issued</th>
               </tr>
             </thead>
             <tbody>
@@ -115,24 +123,24 @@ export default async function ClientDashboardPage() {
 
                 return (
                   <tr key={report.id}>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       <Link href={`/client/reports/${report.id}`}>
                         <strong>{report.report_number}</strong>
                       </Link>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {report.title ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {report.maintenance_jobs?.job_number ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {report.maintenance_jobs?.sites?.name ?? "Not set"}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {evidenceSummary}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                    <td style={{ whiteSpace: "nowrap" }}>
                       {formatDate(report.issued_at)}
                     </td>
                   </tr>

@@ -85,31 +85,38 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
       {sitesError ? (
         <ErrorState title="Sites unavailable" message="The site list could not be loaded." />
       ) : sites && sites.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 180 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 300 }} />
+              <col style={{ width: 100 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Code</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Location</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+              <tr>
+                <th>Site</th>
+                <th>Code</th>
+                <th>Client</th>
+                <th>Location</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {sites.map((site) => (
                 <tr key={site.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     <strong>{site.name}</strong>
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     {site.site_code ?? "Not set"}
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{site.clients?.name ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>{site.clients?.name ?? "Not set"}</td>
+                  <td>
                     {[site.address, site.city, site.state, site.country].filter(Boolean).join(", ") || "Not set"}
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{site.active ? "Active" : "Inactive"}</td>
+                  <td>{site.active ? "Active" : "Inactive"}</td>
                 </tr>
               ))}
             </tbody>

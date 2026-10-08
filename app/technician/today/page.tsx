@@ -142,19 +142,30 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {jobsError || jobEquipmentError || inspectionsError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 160 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 130 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Client</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Site</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assets</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Checklist</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Findings</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
+              <tr>
+                <th>Job</th>
+                <th>Client</th>
+                <th>Site</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Assets</th>
+                <th>Checklist</th>
+                <th>Findings</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -174,18 +185,18 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
 
                 return (
                   <tr key={job.id}>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       <Link href={`/technician/jobs/${job.id}`}>
                         <strong>{job.job_number}</strong>
                       </Link>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.clients?.name ?? "Not set"}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.sites?.name ?? "Not set"}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{job.scheduled_date}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>{job.clients?.name ?? "Not set"}</td>
+                    <td>{job.sites?.name ?? "Not set"}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{job.scheduled_date}</td>
+                    <td>
                       <StatusBadge>{jobStatusLabel[job.status] ?? job.status}</StatusBadge>
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>
                       {jobAssets.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           {jobAssets.map((asset) => (
@@ -198,9 +209,9 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                         "No assets"
                       )}
                     </td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{checklistSummary}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                    <td>{checklistSummary}</td>
+                    <td>{findingsByJobId.get(job.id) ?? 0}</td>
+                    <td>
                       {job.status === "SCHEDULED" ? (
                         <form action={startJob}>
                           <input name="job_id" type="hidden" value={job.id} />
@@ -288,24 +299,31 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {findingsError ? (
         <EmptyState title="Findings unavailable" message="Captured findings could not be loaded." />
       ) : findings && findings.length > 0 ? (
-        <Card style={{ padding: 0, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card className="table-scroll" style={{ padding: 0 }}>
+          <table className="data-table">
+            <colgroup>
+              <col style={{ width: 180 }} />
+              <col style={{ width: 170 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 100 }} />
+            </colgroup>
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Finding</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Job</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Asset</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Severity</th>
-                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
+              <tr>
+                <th>Finding</th>
+                <th>Job</th>
+                <th>Asset</th>
+                <th>Severity</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {findings.map((finding) => (
                 <tr key={finding.id}>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     <strong>{finding.title}</strong>
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
+                  <td>
                     {finding.maintenance_jobs?.id ? (
                       <Link href={`/technician/jobs/${finding.maintenance_jobs.id}`}>
                         {finding.maintenance_jobs.job_number}
@@ -314,9 +332,9 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                       "Not set"
                     )}
                   </td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.equipment?.asset_code ?? "Not set"}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.severity}</td>
-                  <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{finding.status}</td>
+                  <td>{finding.equipment?.asset_code ?? "Not set"}</td>
+                  <td>{finding.severity}</td>
+                  <td>{finding.status}</td>
                 </tr>
               ))}
             </tbody>
