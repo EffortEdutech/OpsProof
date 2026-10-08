@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { closeJobFromIssuedReport, createPlanAndJob, startJobReview } from "@/app/(dashboard)/maintenance/actions";
+import { CreateJobForm } from "@/app/(dashboard)/maintenance/create-job-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -17,13 +18,6 @@ type MaintenancePageProps = {
     error?: string;
     review?: string;
   }>;
-};
-
-const fieldStyle = {
-  minHeight: 44,
-  border: "1px solid var(--border)",
-  borderRadius: 6,
-  padding: 12
 };
 
 const jobStatusLabel = {
@@ -120,6 +114,19 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       : { data: [], error: null };
 
   const hasSetup = Boolean(clients?.length && sites?.length);
+  const clientOptions = clients?.map((client) => ({ id: client.id, name: client.name })) ?? [];
+  const siteOptions = sites?.map((site) => ({ id: site.id, clientId: site.client_id, name: site.name })) ?? [];
+  const equipmentOptions =
+    equipment?.map((asset) => ({
+      id: asset.id,
+      assetCode: asset.asset_code,
+      typeName: asset.equipment_types?.name ?? "Asset",
+      clientName: asset.buildings?.sites?.clients?.name ?? "Client",
+      siteId: asset.buildings?.site_id ?? "",
+      siteName: asset.buildings?.sites?.name ?? "Site"
+    })) ?? [];
+  const technicianOptions =
+    technicians?.map((technician) => ({ id: technician.id, fullName: technician.full_name })) ?? [];
   const techniciansById = new Map(technicians?.map((technician) => [technician.id, technician.full_name]) ?? []);
   const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
   const equipmentByJobId = new Map<string, NonNullable<typeof jobEquipment>>();
@@ -180,59 +187,18 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
         />
       ) : null}
       <Card>
-        <form action={createPlanAndJob} style={{ display: "grid", gap: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-            <select aria-label="Client" disabled={!hasSetup} name="client_id" required style={fieldStyle}>
-              <option value="">{hasSetup ? "Select client" : "Create a client and site first"}</option>
-              {clients?.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Site" disabled={!hasSetup} name="site_id" required style={fieldStyle}>
-              <option value="">{hasSetup ? "Select site" : "Create a site first"}</option>
-              {sites?.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {clients?.find((client) => client.id === site.client_id)?.name ?? "Client"} - {site.name}
-                </option>
-              ))}
-            </select>
-            <input aria-label="Plan name" disabled={!hasSetup} name="name" placeholder="Plan name" required style={fieldStyle} />
-            <select aria-label="Frequency" disabled={!hasSetup} name="frequency" required style={fieldStyle}>
-              <option value="MONTHLY">Monthly</option>
-              <option value="QUARTERLY">Quarterly</option>
-              <option value="HALF_YEARLY">Half yearly</option>
-              <option value="YEARLY">Yearly</option>
-              <option value="CUSTOM">Custom</option>
-            </select>
-            <select aria-label="Assigned technician" disabled={!hasSetup} name="assigned_technician_id" style={fieldStyle}>
-              <option value="">Unassigned</option>
-              {technicians?.map((technician) => (
-                <option key={technician.id} value={technician.id}>
-                  {technician.full_name}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Assigned asset" disabled={!hasSetup || !equipment?.length} name="equipment_id" style={fieldStyle}>
-              <option value="">{equipment?.length ? "Optional asset" : "Register an asset first"}</option>
-              {equipment?.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.asset_code} - {asset.equipment_types?.name ?? "Asset"} / {asset.buildings?.sites?.clients?.name ?? "Client"} / {asset.buildings?.sites?.name ?? "Site"}
-                </option>
-              ))}
-            </select>
-            <input aria-label="Custom interval days" disabled={!hasSetup} min={1} name="interval_days" placeholder="Custom interval days" style={fieldStyle} type="number" />
-            <input aria-label="Plan start date" disabled={!hasSetup} name="start_date" required style={fieldStyle} type="date" />
-            <input aria-label="First scheduled date" disabled={!hasSetup} name="scheduled_date" required style={fieldStyle} type="date" />
-            <input aria-label="Notes" disabled={!hasSetup} name="notes" placeholder="Notes" style={fieldStyle} />
+        <CreateJobForm
+          action={createPlanAndJob}
+          clients={clientOptions}
+          equipment={equipmentOptions}
+          sites={siteOptions}
+          technicians={technicianOptions}
+        />
+        {!hasSetup ? (
+          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+            Create a client and at least one client site before scheduling maintenance work.
           </div>
-          <div>
-            <Button disabled={!hasSetup} type="submit">
-              Create Plan and Job
-            </Button>
-          </div>
-        </form>
+        ) : null}
       </Card>
       {jobsError || reportsError || findingsError || jobEquipmentError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
