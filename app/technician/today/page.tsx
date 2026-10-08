@@ -82,10 +82,19 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
           .in("job_id", jobIds)
           .order("created_at", { ascending: true })
       : { data: [], error: null };
+  const jobEquipmentIds = jobEquipment?.map((asset) => asset.id) ?? [];
+  const { data: inspections, error: inspectionsError } =
+    jobEquipmentIds.length > 0
+      ? await supabase
+          .from("inspections")
+          .select("id,job_equipment_id,status")
+          .in("job_equipment_id", jobEquipmentIds)
+      : { data: [], error: null };
 
   const inProgressJobs = jobs?.filter((job) => job.status === "IN_PROGRESS") ?? [];
   const findingsByJobId = new Map<string, number>();
   const equipmentByJobId = new Map<string, NonNullable<typeof jobEquipment>>();
+  const inspectionsByAssetId = new Map(inspections?.map((inspection) => [inspection.job_equipment_id, inspection]) ?? []);
   const inProgressEquipment =
     jobEquipment?.filter((asset) => inProgressJobs.some((job) => job.id === asset.job_id)) ?? [];
 
@@ -130,7 +139,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
               : "Field action failed."}
         </Card>
       ) : null}
-      {jobsError || jobEquipmentError ? (
+      {jobsError || jobEquipmentError || inspectionsError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <Card style={{ padding: 0, overflowX: "auto" }}>
@@ -143,6 +152,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Scheduled</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Status</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Assets</th>
+                <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Checklist</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Findings</th>
                 <th style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>Action</th>
               </tr>
@@ -150,6 +160,17 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
             <tbody>
               {jobs.map((job) => {
                 const jobAssets = equipmentByJobId.get(job.id) ?? [];
+                const completedAssets = jobAssets.filter((asset) => asset.status === "COMPLETED").length;
+                const startedInspections = jobAssets.filter((asset) => inspectionsByAssetId.has(asset.id)).length;
+                const canSubmit = jobAssets.length === 0 || completedAssets === jobAssets.length;
+                const checklistSummary =
+                  jobAssets.length === 0
+                    ? "No assets"
+                    : completedAssets === jobAssets.length
+                      ? `${completedAssets}/${jobAssets.length} complete`
+                      : startedInspections > 0
+                        ? `${completedAssets}/${jobAssets.length} complete`
+                        : "Not started";
 
                 return (
                   <tr key={job.id}>
@@ -168,13 +189,16 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                       {jobAssets.length > 0 ? (
                         <div style={{ display: "grid", gap: 4 }}>
                           {jobAssets.map((asset) => (
-                            <span key={asset.id}>{asset.equipment?.asset_code ?? "Asset"}</span>
+                            <span key={asset.id}>
+                              {asset.equipment?.asset_code ?? "Asset"} - {asset.status}
+                            </span>
                           ))}
                         </div>
                       ) : (
                         "No assets"
                       )}
                     </td>
+                    <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{checklistSummary}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>{findingsByJobId.get(job.id) ?? 0}</td>
                     <td style={{ padding: 14, borderBottom: "1px solid var(--border)" }}>
                       {job.status === "SCHEDULED" ? (
@@ -185,13 +209,18 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                         </form>
                       ) : null}
                       {job.status === "IN_PROGRESS" ? (
-                        <form action={submitJob}>
-                          <input name="job_id" type="hidden" value={job.id} />
-                          <input name="next" type="hidden" value="/technician/today" />
-                          <Button type="submit" variant="secondary">
-                            Submit
-                          </Button>
-                        </form>
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <form action={submitJob}>
+                            <input name="job_id" type="hidden" value={job.id} />
+                            <input name="next" type="hidden" value="/technician/today" />
+                            <Button disabled={!canSubmit} type="submit" variant="secondary">
+                              Submit
+                            </Button>
+                          </form>
+                          {!canSubmit ? (
+                            <span style={{ color: "var(--muted)", fontSize: "0.8125rem" }}>Complete checklist first</span>
+                          ) : null}
+                        </div>
                       ) : null}
                       {job.status === "SUBMITTED" ? (
                         "Submitted"
