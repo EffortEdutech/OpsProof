@@ -45,6 +45,17 @@ export async function createPlanAndJob(formData: FormData) {
 
   const supabase = await createClient();
   let buildingId: string | null = null;
+  const { data: site, error: siteError } = await supabase
+    .from("sites")
+    .select("id,client_id")
+    .eq("id", siteId)
+    .eq("organisation_id", profile.organisation_id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (siteError || !site || site.client_id !== clientId) {
+    redirect("/maintenance?error=client-site-mismatch");
+  }
 
   if (equipmentId) {
     const { data: equipment, error: equipmentError } = await supabase

@@ -173,6 +173,8 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                     ? "The selected asset must belong to the selected site."
                     : params.error === "incomplete-checklists"
                       ? "Complete assigned asset checklists before starting management review."
+                      : params.error === "client-site-mismatch"
+                        ? "Choose a site that belongs to the selected client."
                       : "The maintenance job could not be saved."
           }
         />
@@ -192,7 +194,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               <option value="">{hasSetup ? "Select site" : "Create a site first"}</option>
               {sites?.map((site) => (
                 <option key={site.id} value={site.id}>
-                  {site.name}
+                  {clients?.find((client) => client.id === site.client_id)?.name ?? "Client"} - {site.name}
                 </option>
               ))}
             </select>
@@ -216,7 +218,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               <option value="">{equipment?.length ? "Optional asset" : "Register an asset first"}</option>
               {equipment?.map((asset) => (
                 <option key={asset.id} value={asset.id}>
-                  {asset.asset_code} - {asset.equipment_types?.name ?? "Asset"} / {asset.buildings?.sites?.name ?? "Site"}
+                  {asset.asset_code} - {asset.equipment_types?.name ?? "Asset"} / {asset.buildings?.sites?.clients?.name ?? "Client"} / {asset.buildings?.sites?.name ?? "Site"}
                 </option>
               ))}
             </select>
