@@ -143,6 +143,13 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
   const assignedAssetsComplete = jobEquipment?.length
     ? jobEquipment.every((asset) => asset.status === "COMPLETED")
     : true;
+  const assignedAssetCount = jobEquipment?.length ?? 0;
+  const completedAssetCount = jobEquipment?.filter((asset) => asset.status === "COMPLETED").length ?? 0;
+  const startedInspectionCount = inspections?.length ?? 0;
+  const checklistProgress =
+    assignedAssetCount === 0
+      ? "No assets assigned"
+      : `${completedAssetCount}/${assignedAssetCount} complete`;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -210,7 +217,8 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           <Field label="Scheduled" value={job.scheduled_date} />
           <Field label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
           <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
-          <Field label="Assets" value={`${jobEquipment?.length ?? 0}`} />
+          <Field label="Assets" value={assignedAssetCount > 0 ? `${assignedAssetCount} assigned` : "0"} />
+          <Field label="Checklist" value={checklistProgress} />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
         </div>
       </Card>
@@ -218,6 +226,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field workflow</h2>
         <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", paddingBottom: "1rem" }}>
+          <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.75rem" }}>1. Start field work</h3>
           {job.status === "SCHEDULED" ? (
             <form action={startJob}>
               <input name="job_id" type="hidden" value={job.id} />
@@ -226,27 +235,21 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
             </form>
           ) : null}
           {job.status === "IN_PROGRESS" ? (
-            <div style={{ display: "grid", gap: "0.5rem" }}>
-              <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-                Complete assigned asset checklists before submitting for management review.
-              </div>
-              <form action={submitJob}>
-                <input name="job_id" type="hidden" value={job.id} />
-                <input name="next" type="hidden" value={next} />
-                <Button disabled={!assignedAssetsComplete} type="submit" variant="secondary">
-                  Submit for Review
-                </Button>
-              </form>
-              {!assignedAssetsComplete ? (
-                <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-                  Complete assigned asset checklists before submitting this job.
-                </div>
-              ) : null}
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Field work is active. Complete checklist evidence before submitting for management review.
             </div>
           ) : null}
           {job.status === "SUBMITTED" ? <div>Submitted jobs are locked for management review.</div> : null}
+          {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
+            <div style={{ color: "var(--muted)" }}>No field action is available for this job state.</div>
+          ) : null}
         </div>
-        <h3 style={{ fontSize: "0.95rem", margin: "0 0 1rem" }}>Assigned assets</h3>
+        <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.5rem" }}>2. Complete assigned asset checklists</h3>
+        <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
+          {assignedAssetCount > 0
+            ? `${startedInspectionCount}/${assignedAssetCount} started, ${completedAssetCount}/${assignedAssetCount} complete`
+            : "No asset checklist is required for this job."}
+        </div>
         {jobEquipmentError || inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
         ) : jobEquipment && jobEquipment.length > 0 ? (
@@ -356,7 +359,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Capture finding</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>3. Capture findings</h2>
         <form action={addFinding} style={{ display: "grid", gap: "1rem" }}>
           <input name="job_id" type="hidden" value={job.id} />
           <input name="next" type="hidden" value={next} />
@@ -391,6 +394,36 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
             </div>
           ) : null}
         </form>
+      </Card>
+
+      <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>4. Submit for management review</h2>
+        {job.status === "IN_PROGRESS" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Submit when field evidence is complete. Submitted jobs are locked for management review.
+            </div>
+            <form action={submitJob}>
+              <input name="job_id" type="hidden" value={job.id} />
+              <input name="next" type="hidden" value={next} />
+              <Button disabled={!assignedAssetsComplete} type="submit" variant="secondary">
+                Submit for Review
+              </Button>
+            </form>
+            {!assignedAssetsComplete ? (
+              <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+                Complete assigned asset checklists before submitting this job.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {job.status === "SCHEDULED" ? (
+          <div style={{ color: "var(--muted)" }}>Start the job before submitting it.</div>
+        ) : null}
+        {job.status === "SUBMITTED" ? <div>Submitted jobs are locked for management review.</div> : null}
+        {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
+          <div style={{ color: "var(--muted)" }}>No submit action is available for this job state.</div>
+        ) : null}
       </Card>
 
       <Card>
