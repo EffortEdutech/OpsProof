@@ -82,12 +82,45 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           .in("job_id", reportJobIds)
           .order("created_at", { ascending: false })
       : { data: [], error: null };
+  const { data: jobEquipment, error: jobEquipmentError } =
+    reportJobIds.length > 0
+      ? await supabase
+          .from("job_equipment")
+          .select("id,job_id")
+          .in("job_id", reportJobIds)
+      : { data: [], error: null };
+  const jobEquipmentIds = jobEquipment?.map((asset) => asset.id) ?? [];
+  const { data: inspections, error: inspectionsError } =
+    jobEquipmentIds.length > 0
+      ? await supabase
+          .from("inspections")
+          .select("id,job_id,job_equipment_id")
+          .in("job_equipment_id", jobEquipmentIds)
+      : { data: [], error: null };
+  const inspectionIds = inspections?.map((inspection) => inspection.id) ?? [];
+  const { data: inspectionResults, error: resultsError } =
+    inspectionIds.length > 0
+      ? await supabase
+          .from("inspection_results")
+          .select("id,inspection_id,result_status")
+          .in("inspection_id", inspectionIds)
+      : { data: [], error: null };
 
   const findingsByJobId = new Map<string, NonNullable<typeof findings>>();
+  const inspectionJobIdById = new Map(inspections?.map((inspection) => [inspection.id, inspection.job_id]) ?? []);
+  const checklistResultCountByJobId = new Map<string, number>();
 
   findings?.forEach((finding) => {
     const current = findingsByJobId.get(finding.job_id) ?? [];
     findingsByJobId.set(finding.job_id, [...current, finding]);
+  });
+
+  inspectionResults?.forEach((result) => {
+    const jobId = inspectionJobIdById.get(result.inspection_id);
+
+    if (jobId) {
+      checklistResultCountByJobId.set(jobId, (checklistResultCountByJobId.get(jobId) ?? 0) + 1);
+    }
   });
 
   const reportedJobIds = new Set(reports?.filter((report) => report.status !== "VOID").map((report) => report.job_id) ?? []);
@@ -148,7 +181,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </Card>
       {reportsError ? (
         <ErrorState title="Reports unavailable" message="The report list could not be loaded." />
-      ) : findingsError ? (
+      ) : findingsError || jobEquipmentError || inspectionsError || resultsError ? (
         <ErrorState title="Evidence unavailable" message="Captured findings could not be loaded." />
       ) : reports && reports.length > 0 ? (
         <Card style={{ padding: 0, overflowX: "auto" }}>
@@ -169,13 +202,24 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             <tbody>
               {reports.map((report) => {
                 const reportFindings = findingsByJobId.get(report.job_id) ?? [];
+                const checklistResultCount = checklistResultCountByJobId.get(report.job_id) ?? 0;
+                const evidenceParts = [];
+
+                if (reportFindings.length > 0) {
+                  evidenceParts.push(
+                    `${reportFindings.length} finding${reportFindings.length === 1 ? "" : "s"}: ${reportFindings
+                      .slice(0, 2)
+                      .map((finding) => `${finding.title} - ${finding.severity} - ${finding.status}`)
+                      .join("; ")}${reportFindings.length > 2 ? `; +${reportFindings.length - 2} more` : ""}`
+                  );
+                }
+
+                if (checklistResultCount > 0) {
+                  evidenceParts.push(`${checklistResultCount} checklist result${checklistResultCount === 1 ? "" : "s"}`);
+                }
+
                 const evidenceSummary =
-                  reportFindings.length > 0
-                    ? `${reportFindings.length} finding${reportFindings.length === 1 ? "" : "s"}: ${reportFindings
-                        .slice(0, 2)
-                        .map((finding) => `${finding.title} - ${finding.severity} - ${finding.status}`)
-                        .join("; ")}${reportFindings.length > 2 ? `; +${reportFindings.length - 2} more` : ""}`
-                    : "No findings";
+                  evidenceParts.length > 0 ? evidenceParts.join(" / ") : "No evidence";
 
                 return (
                   <tr key={report.id}>

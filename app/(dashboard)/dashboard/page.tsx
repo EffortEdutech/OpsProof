@@ -25,7 +25,8 @@ export default async function DashboardPage() {
     { count: completedJobCount },
     { count: generatedReportCount },
     { count: reviewedReportCount },
-    { count: issuedReportCount }
+    { count: issuedReportCount },
+    { count: checklistResultCount }
   ] = await Promise.all([
     supabase.from("clients").select("id", { count: "exact", head: true }),
     supabase.from("sites").select("id", { count: "exact", head: true }),
@@ -36,7 +37,8 @@ export default async function DashboardPage() {
     supabase.from("maintenance_jobs").select("id", { count: "exact", head: true }).eq("status", "COMPLETED"),
     supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "GENERATED"),
     supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "REVIEWED"),
-    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "ISSUED")
+    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "ISSUED"),
+    supabase.from("inspection_results").select("id", { count: "exact", head: true })
   ]);
 
   return (
@@ -49,6 +51,7 @@ export default async function DashboardPage() {
         <MetricCard label="Ready for Report" value={underReviewJobCount} note="Management review started" />
         <MetricCard label="Completed Jobs" value={completedJobCount} note="Closed after issue" />
         <MetricCard label="Issued Reports" value={issuedReportCount} note="Visible to clients" />
+        <MetricCard label="Checklist Results" value={checklistResultCount} note="Structured inspection evidence" />
         <MetricCard label="Generated Reports" value={generatedReportCount} note="Needs report review" />
         <MetricCard label="Reviewed Reports" value={reviewedReportCount} note="Ready to issue" />
         <MetricCard label="Clients" value={clientCount} note={`${siteCount ?? 0} active site${siteCount === 1 ? "" : "s"}`} />
