@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { addFinding, completeAssetInspection, startAssetInspection, startJob, submitJob } from "@/app/technician/today/actions";
+import { addFinding, completeAssetInspection, saveInspectionResult, startAssetInspection, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
@@ -18,6 +18,7 @@ type TechnicianJobPageProps = {
     finding?: string;
     inspection?: string;
     inspectionCompleted?: string;
+    result?: string;
     started?: string;
     submitted?: string;
   }>;
@@ -118,13 +119,26 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           .in("template_id", templateIds)
           .order("sort_order", { ascending: true })
       : { data: [], error: null };
+  const activeInspectionIds = inspections?.map((inspection) => inspection.id) ?? [];
+  const { data: inspectionResults, error: resultsError } =
+    activeInspectionIds.length > 0
+      ? await supabase
+          .from("inspection_results")
+          .select("id,inspection_id,template_item_id,result_status,notes,updated_at")
+          .in("inspection_id", activeInspectionIds)
+      : { data: [], error: null };
 
   const inspectionsByAssetId = new Map(inspections?.map((inspection) => [inspection.job_equipment_id, inspection]) ?? []);
   const itemsByTemplateId = new Map<string, NonNullable<typeof templateItems>>();
+  const resultByInspectionAndItem = new Map<string, NonNullable<typeof inspectionResults>[number]>();
 
   templateItems?.forEach((item) => {
     const current = itemsByTemplateId.get(item.template_id) ?? [];
     itemsByTemplateId.set(item.template_id, [...current, item]);
+  });
+
+  inspectionResults?.forEach((result) => {
+    resultByInspectionAndItem.set(`${result.inspection_id}:${result.template_item_id}`, result);
   });
 
   return (
@@ -167,6 +181,11 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
           Asset inspection completed.
         </Card>
       ) : null}
+      {query?.result ? (
+        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+          Checklist result saved.
+        </Card>
+      ) : null}
       {query?.error ? (
         <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
           {query.error === "job-not-started"
@@ -175,6 +194,10 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
               ? "No active checklist template is available for this asset type."
               : query.error === "inspection-not-ready"
                 ? "Start the job before starting asset inspections."
+                : query.error === "missing-result"
+                  ? "Choose a checklist result before saving."
+                  : query.error === "invalid-checklist-item"
+                    ? "The checklist item does not belong to this inspection."
                 : "Field action failed."}
         </Card>
       ) : null}
@@ -191,13 +214,18 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
 
       <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
-        {jobEquipmentError || inspectionsError || templateItemsError ? (
+        {jobEquipmentError || inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
         ) : jobEquipment && jobEquipment.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             {jobEquipment.map((asset) => {
               const inspection = inspectionsByAssetId.get(asset.id);
               const checklistItems = inspection ? itemsByTemplateId.get(inspection.template_id) ?? [] : [];
+              const requiredItems = checklistItems.filter((item) => item.required);
+              const answeredRequiredItems = inspection
+                ? requiredItems.filter((item) => resultByInspectionAndItem.has(`${inspection.id}:${item.id}`))
+                : [];
+              const canCompleteChecklist = inspection?.status === "IN_PROGRESS" && requiredItems.length === answeredRequiredItems.length;
 
               return (
                 <div key={asset.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
@@ -216,11 +244,35 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                       {checklistItems.length > 0 ? (
                         checklistItems.map((item) => (
                           <div key={item.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
+                            {(() => {
+                              const savedResult = resultByInspectionAndItem.get(`${inspection.id}:${item.id}`);
+
+                              return (
+                                <>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
                               <span>{item.prompt}</span>
-                              <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{item.field_type}</span>
+                                      <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{savedResult?.result_status ?? item.field_type}</span>
                             </div>
                             {item.guidance ? <div style={{ color: "var(--muted)", marginTop: 4 }}>{item.guidance}</div> : null}
+                                  {inspection.status === "IN_PROGRESS" ? (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                                      {(["PASS", "ATTENTION", "FAIL", "NA"] as const).map((resultStatus) => (
+                                        <form action={saveInspectionResult} key={resultStatus}>
+                                          <input name="inspection_id" type="hidden" value={inspection.id} />
+                                          <input name="template_item_id" type="hidden" value={item.id} />
+                                          <input name="job_id" type="hidden" value={job.id} />
+                                          <input name="result_status" type="hidden" value={resultStatus} />
+                                          <input name="next" type="hidden" value={next} />
+                                          <Button type="submit" variant={savedResult?.result_status === resultStatus ? "primary" : "secondary"}>
+                                            {resultStatus}
+                                          </Button>
+                                        </form>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </>
+                              );
+                            })()}
                           </div>
                         ))
                       ) : (
@@ -251,9 +303,14 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                       <input name="job_equipment_id" type="hidden" value={asset.id} />
                       <input name="job_id" type="hidden" value={job.id} />
                       <input name="next" type="hidden" value={next} />
-                      <Button type="submit" variant="secondary">
+                      <Button disabled={!canCompleteChecklist} type="submit" variant="secondary">
                         Complete Checklist
                       </Button>
+                      {!canCompleteChecklist ? (
+                        <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: 8 }}>
+                          Answer required checklist items before completing.
+                        </div>
+                      ) : null}
                     </form>
                   ) : null}
                 </div>

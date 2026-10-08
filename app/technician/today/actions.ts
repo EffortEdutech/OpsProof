@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
 type FindingSeverity = Database["public"]["Enums"]["finding_severity"];
+type InspectionResultStatus = Database["public"]["Enums"]["inspection_result_status"];
 
 const severities = new Set<FindingSeverity>(["OBSERVATION", "LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+const inspectionResultStatuses = new Set<InspectionResultStatus>(["PASS", "ATTENTION", "FAIL", "NA"]);
 
 function value(formData: FormData, name: string) {
   const entry = formData.get(name);
@@ -25,6 +27,11 @@ function nextPath(formData: FormData) {
 function severityValue(formData: FormData) {
   const severity = value(formData, "severity");
   return severity && severities.has(severity as FindingSeverity) ? (severity as FindingSeverity) : "OBSERVATION";
+}
+
+function inspectionResultValue(formData: FormData) {
+  const result = value(formData, "result_status");
+  return result && inspectionResultStatuses.has(result as InspectionResultStatus) ? (result as InspectionResultStatus) : null;
 }
 
 export async function startJob(formData: FormData) {
@@ -266,4 +273,69 @@ export async function completeAssetInspection(formData: FormData) {
   revalidatePath("/technician/today");
   revalidatePath(`/technician/jobs/${jobId}`);
   redirect(`${redirectTo}?inspectionCompleted=1`);
+}
+
+export async function saveInspectionResult(formData: FormData) {
+  const profile = await requireProfile();
+
+  if (!canAccessTechnician(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const inspectionId = value(formData, "inspection_id");
+  const templateItemId = value(formData, "template_item_id");
+  const jobId = value(formData, "job_id");
+  const resultStatus = inspectionResultValue(formData);
+  const redirectTo = nextPath(formData);
+
+  if (!inspectionId || !templateItemId || !jobId || !resultStatus) {
+    redirect(`${redirectTo}?error=missing-result`);
+  }
+
+  const supabase = await createClient();
+  const { data: inspection, error: inspectionError } = await supabase
+    .from("inspections")
+    .select("id,organisation_id,template_id,status,maintenance_jobs(assigned_technician_id,status)")
+    .eq("id", inspectionId)
+    .maybeSingle();
+
+  const assignedToCurrentUser = Array.isArray(inspection?.maintenance_jobs)
+    ? inspection?.maintenance_jobs[0]?.assigned_technician_id === profile.id
+    : inspection?.maintenance_jobs?.assigned_technician_id === profile.id;
+  const jobStatus = Array.isArray(inspection?.maintenance_jobs)
+    ? inspection?.maintenance_jobs[0]?.status
+    : inspection?.maintenance_jobs?.status;
+
+  if (inspectionError || !inspection || !assignedToCurrentUser || inspection.status !== "IN_PROGRESS" || jobStatus !== "IN_PROGRESS") {
+    redirect(`${redirectTo}?error=inspection-not-ready`);
+  }
+
+  const { data: templateItem, error: itemError } = await supabase
+    .from("inspection_template_items")
+    .select("id")
+    .eq("id", templateItemId)
+    .eq("template_id", inspection.template_id)
+    .maybeSingle();
+
+  if (itemError || !templateItem) {
+    redirect(`${redirectTo}?error=invalid-checklist-item`);
+  }
+
+  const { error } = await supabase.from("inspection_results").upsert(
+    {
+      organisation_id: inspection.organisation_id,
+      inspection_id: inspection.id,
+      template_item_id: templateItem.id,
+      result_status: resultStatus
+    },
+    { onConflict: "inspection_id,template_item_id" }
+  );
+
+  if (error) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(error.code ?? "result-save-failed")}`);
+  }
+
+  revalidatePath("/technician/today");
+  revalidatePath(`/technician/jobs/${jobId}`);
+  redirect(`${redirectTo}?result=1`);
 }
