@@ -140,6 +140,9 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
   inspectionResults?.forEach((result) => {
     resultByInspectionAndItem.set(`${result.inspection_id}:${result.template_item_id}`, result);
   });
+  const assignedAssetsComplete = jobEquipment?.length
+    ? jobEquipment.every((asset) => asset.status === "COMPLETED")
+    : true;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -213,7 +216,37 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       </Card>
 
       <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Assigned assets</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field workflow</h2>
+        <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", paddingBottom: "1rem" }}>
+          {job.status === "SCHEDULED" ? (
+            <form action={startJob}>
+              <input name="job_id" type="hidden" value={job.id} />
+              <input name="next" type="hidden" value={next} />
+              <Button type="submit">Start Job</Button>
+            </form>
+          ) : null}
+          {job.status === "IN_PROGRESS" ? (
+            <div style={{ display: "grid", gap: "0.5rem" }}>
+              <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+                Complete assigned asset checklists before submitting for management review.
+              </div>
+              <form action={submitJob}>
+                <input name="job_id" type="hidden" value={job.id} />
+                <input name="next" type="hidden" value={next} />
+                <Button disabled={!assignedAssetsComplete} type="submit" variant="secondary">
+                  Submit for Review
+                </Button>
+              </form>
+              {!assignedAssetsComplete ? (
+                <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+                  Complete assigned asset checklists before submitting this job.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {job.status === "SUBMITTED" ? <div>Submitted jobs are locked for management review.</div> : null}
+        </div>
+        <h3 style={{ fontSize: "0.95rem", margin: "0 0 1rem" }}>Assigned assets</h3>
         {jobEquipmentError || inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Assets unavailable" message="Assigned assets could not be loaded." />
         ) : jobEquipment && jobEquipment.length > 0 ? (
@@ -320,27 +353,6 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
         ) : (
           <EmptyState title="No assets assigned" message="Management can attach assets when scheduling the job." />
         )}
-      </Card>
-
-      <Card>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field action</h2>
-        {job.status === "SCHEDULED" ? (
-          <form action={startJob}>
-            <input name="job_id" type="hidden" value={job.id} />
-            <input name="next" type="hidden" value={next} />
-            <Button type="submit">Start Job</Button>
-          </form>
-        ) : null}
-        {job.status === "IN_PROGRESS" ? (
-          <form action={submitJob}>
-            <input name="job_id" type="hidden" value={job.id} />
-            <input name="next" type="hidden" value={next} />
-            <Button type="submit" variant="secondary">
-              Submit for Review
-            </Button>
-          </form>
-        ) : null}
-        {job.status === "SUBMITTED" ? <div>Submitted jobs are locked for management review.</div> : null}
       </Card>
 
       <Card>
