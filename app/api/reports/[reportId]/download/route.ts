@@ -1,0 +1,48 @@
+import { NextResponse } from "next/server";
+import { getCurrentProfile } from "@/lib/auth/current-user";
+import { canAccessClientPortal, canAccessManagement } from "@/lib/permissions/roles";
+import { fetchIssuedReportData } from "@/lib/reports/issued-report-data";
+import { renderReportHtml } from "@/lib/reports/report-html";
+import { standardMaintenanceReportLayout } from "@/lib/reports/standard-maintenance-report-layout";
+import { createClient } from "@/lib/supabase/server";
+
+type DownloadReportRouteProps = {
+  params: Promise<{
+    reportId: string;
+  }>;
+};
+
+function filenameFor(reportNumber: string) {
+  return `${reportNumber.replace(/[^a-z0-9_-]+/gi, "-")}.html`;
+}
+
+export async function GET(_request: Request, { params }: DownloadReportRouteProps) {
+  const profile = await getCurrentProfile();
+
+  if (!profile) {
+    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  }
+
+  if (!canAccessManagement(profile.role) && !canAccessClientPortal(profile.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { reportId } = await params;
+  const supabase = await createClient();
+  const { data, error } = await fetchIssuedReportData(supabase, reportId, {
+    issuedOnly: canAccessClientPortal(profile.role)
+  });
+
+  if (error || !data) {
+    return NextResponse.json({ error: "Report not found" }, { status: 404 });
+  }
+
+  const html = renderReportHtml(data, standardMaintenanceReportLayout);
+
+  return new NextResponse(html, {
+    headers: {
+      "Content-Disposition": `attachment; filename="${filenameFor(data.report.reportNumber)}"`,
+      "Content-Type": "text/html; charset=utf-8"
+    }
+  });
+}
