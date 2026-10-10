@@ -288,11 +288,9 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
         <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", paddingBottom: "1rem" }}>
           <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.75rem" }}>1. Start field work</h3>
           {job.status === "SCHEDULED" ? (
-            <form action={startJob}>
-              <input name="job_id" type="hidden" value={job.id} />
-              <input name="next" type="hidden" value={next} />
-              <Button type="submit">Start Job</Button>
-            </form>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Use the Next field action above to start this job.
+            </div>
           ) : null}
           {job.status === "IN_PROGRESS" ? (
             <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
@@ -377,11 +375,9 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                     </div>
                   ) : null}
                   {job.status === "IN_PROGRESS" && !inspection ? (
-                    <form action={startAssetInspection} style={{ marginTop: "0.75rem" }}>
-                      <input name="job_equipment_id" type="hidden" value={asset.id} />
-                      <input name="next" type="hidden" value={next} />
-                      <Button type="submit">Start Checklist</Button>
-                    </form>
+                    <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+                      Use the Next field action above to start the next pending checklist.
+                    </div>
                   ) : null}
                   {job.status === "SCHEDULED" && !inspection ? (
                     <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
@@ -461,15 +457,8 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
         {job.status === "IN_PROGRESS" ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-              Submit when field evidence is complete. Submitted jobs are locked for management review.
+              Submit from the Next field action above when field evidence is complete. Submitted jobs are locked for management review.
             </div>
-            <form action={submitJob}>
-              <input name="job_id" type="hidden" value={job.id} />
-              <input name="next" type="hidden" value={next} />
-              <Button disabled={!assignedAssetsComplete} type="submit" variant="secondary">
-                Submit for Review
-              </Button>
-            </form>
             {!assignedAssetsComplete ? (
               <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
                 Complete assigned asset checklists before submitting this job.
