@@ -14,6 +14,7 @@ type TechnicianTodayPageProps = {
     error?: string;
     finding?: string;
     started?: string;
+    status?: string;
     submitted?: string;
   }>;
 };
@@ -33,6 +34,16 @@ const jobStatusLabel = {
   COMPLETED: "Completed",
   CANCELLED: "Cancelled"
 };
+
+const technicianJobFilters = [
+  { key: "active", label: "Action needed" },
+  { key: "SCHEDULED", label: "Start jobs" },
+  { key: "IN_PROGRESS", label: "Field work" },
+  { key: "SUBMITTED", label: "Submitted" },
+  { key: "all", label: "All today" }
+];
+
+const activeTechnicianStatuses = new Set(["SCHEDULED", "IN_PROGRESS"]);
 
 function StatusBadge({ children }: { children: string }) {
   return (
@@ -111,6 +122,34 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
     const current = equipmentByJobId.get(asset.job_id) ?? [];
     equipmentByJobId.set(asset.job_id, [...current, asset]);
   });
+  const selectedStatus = technicianJobFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "active" : "active";
+  const jobCounts = new Map<string, number>();
+  const filteredJobs =
+    jobs?.filter((job) => {
+      jobCounts.set(job.status, (jobCounts.get(job.status) ?? 0) + 1);
+
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      if (selectedStatus === "active") {
+        return activeTechnicianStatuses.has(job.status);
+      }
+
+      return job.status === selectedStatus;
+    }) ?? [];
+  const activeJobCount = jobs?.filter((job) => activeTechnicianStatuses.has(job.status)).length ?? 0;
+  const filterCountByKey = (key: string) => {
+    if (key === "all") {
+      return jobs?.length ?? 0;
+    }
+
+    if (key === "active") {
+      return activeJobCount;
+    }
+
+    return jobCounts.get(key) ?? 0;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -142,6 +181,37 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
       {jobsError || jobEquipmentError || inspectionsError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
+        <>
+        <Card>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {technicianJobFilters.map((filter) => {
+              const selected = selectedStatus === filter.key;
+
+              return (
+                <Link
+                  aria-current={selected ? "page" : undefined}
+                  href={filter.key === "active" ? "/technician/today" : `/technician/today?status=${filter.key}`}
+                  key={filter.key}
+                  style={{
+                    background: selected ? "var(--accent)" : "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 6,
+                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
+                    fontWeight: 700,
+                    padding: "8px 10px",
+                    textDecoration: "none"
+                  }}
+                >
+                  {filter.label} ({filterCountByKey(filter.key)})
+                </Link>
+              );
+            })}
+          </div>
+          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+            Action needed shows jobs to start and field work still in progress. Submitted jobs are locked for management review.
+          </div>
+        </Card>
+        {filteredJobs.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <colgroup>
@@ -169,7 +239,7 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => {
+              {filteredJobs.map((job) => {
                 const jobAssets = equipmentByJobId.get(job.id) ?? [];
                 const completedAssets = jobAssets.filter((asset) => asset.status === "COMPLETED").length;
                 const startedInspections = jobAssets.filter((asset) => inspectionsByAssetId.has(asset.id)).length;
@@ -255,6 +325,10 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
             </tbody>
           </table>
         </Card>
+        ) : (
+          <EmptyState title="No jobs in this view" message="Choose another job filter or wait for a new assignment." />
+        )}
+        </>
       ) : (
         <EmptyState title="No assigned jobs" message="Scheduled and in-progress jobs will appear here." />
       )}
