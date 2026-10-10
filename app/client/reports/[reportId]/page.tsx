@@ -127,6 +127,7 @@ export default async function ClientReportPage({ params }: ClientReportPageProps
         }))
       };
     }) ?? [];
+  const checklistResultCount = inspectionResults?.length ?? 0;
 
   return (
     <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
@@ -147,16 +148,19 @@ export default async function ClientReportPage({ params }: ClientReportPageProps
       </div>
 
       <Card className="print-section">
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>1. Report summary</h2>
         <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
           <Field label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
           <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
           <Field label="Scheduled" value={report.maintenance_jobs?.scheduled_date ?? "Not set"} />
           <Field label="Issued" value={formatDate(report.issued_at)} />
+          <Field label="Findings" value={`${findings?.length ?? 0}`} />
+          <Field label="Checklist" value={`${checklistResultCount} result${checklistResultCount === 1 ? "" : "s"}`} />
         </div>
       </Card>
 
       <Card className="print-section">
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Evidence</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>2. Field evidence</h2>
         {findingsError ? (
           <EmptyState title="Evidence unavailable" message="Report evidence could not be loaded." />
         ) : findings && findings.length > 0 ? (
@@ -179,7 +183,7 @@ export default async function ClientReportPage({ params }: ClientReportPageProps
       </Card>
 
       <Card className="print-section">
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Checklist results</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>3. Checklist evidence</h2>
         {inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
         ) : (
