@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClientRecord } from "@/app/(dashboard)/clients/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -12,8 +13,15 @@ type ClientsPageProps = {
   searchParams?: Promise<{
     created?: string;
     error?: string;
+    status?: string;
   }>;
 };
+
+const clientFilters = [
+  { key: "active", label: "Active" },
+  { key: "inactive", label: "Inactive" },
+  { key: "all", label: "All clients" }
+];
 
 const inputStyle = {
   minHeight: 44,
@@ -35,6 +43,28 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
     .from("clients")
     .select("id,name,registration_no,industry,phone,email,active,created_at")
     .order("created_at", { ascending: false });
+  const selectedStatus = clientFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "active" : "active";
+  const activeClientCount = clients?.filter((client) => client.active).length ?? 0;
+  const inactiveClientCount = clients?.filter((client) => !client.active).length ?? 0;
+  const filteredClients =
+    clients?.filter((client) => {
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      return selectedStatus === "active" ? client.active : !client.active;
+    }) ?? [];
+  const filterCountByKey = (key: string) => {
+    if (key === "inactive") {
+      return inactiveClientCount;
+    }
+
+    if (key === "all") {
+      return clients?.length ?? 0;
+    }
+
+    return activeClientCount;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -66,6 +96,18 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
         {error ? (
           <ErrorState title="Clients unavailable" message="The client list could not be loaded." />
         ) : clients && clients.length > 0 ? (
+          <>
+          <FilterBar
+            description="Active clients are available for new sites, equipment, maintenance jobs, and issued reports."
+            items={clientFilters.map((filter) => ({
+              count: filterCountByKey(filter.key),
+              href: filter.key === "active" ? "/clients" : `/clients?status=${filter.key}`,
+              key: filter.key,
+              label: filter.label
+            }))}
+            selectedKey={selectedStatus}
+          />
+          {filteredClients.length > 0 ? (
           <Card className="table-scroll" style={{ padding: 0 }}>
             <table className="data-table">
               <colgroup>
@@ -85,7 +127,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client) => (
+                {filteredClients.map((client) => (
                   <tr key={client.id}>
                     <td>
                       <strong>{client.name}</strong>
@@ -107,6 +149,10 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
               </tbody>
             </table>
           </Card>
+          ) : (
+            <EmptyState title="No clients in this view" message="Choose another client status filter." />
+          )}
+          </>
         ) : (
           <EmptyState title="No clients yet" message="Create the first client to begin the maintenance setup flow." />
         )}

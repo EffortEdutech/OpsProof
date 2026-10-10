@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createBuildingRecord, createEquipmentRecord, createSystemRecord } from "@/app/(dashboard)/equipment/actions";
 import { EquipmentForms } from "@/app/(dashboard)/equipment/equipment-forms";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -13,9 +14,17 @@ type EquipmentPageProps = {
     building?: string;
     equipment?: string;
     error?: string;
+    status?: string;
     system?: string;
   }>;
 };
+
+const equipmentFilters = [
+  { key: "ACTIVE", label: "Active" },
+  { key: "OUT_OF_SERVICE", label: "Out of service" },
+  { key: "RETIRED", label: "Retired" },
+  { key: "all", label: "All assets" }
+];
 
 const statusLabel = {
   ACTIVE: "Active",
@@ -71,6 +80,25 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
     })) ?? [];
   const equipmentTypeOptions =
     equipmentTypes?.map((type) => ({ id: type.id, name: type.name, code: type.code })) ?? [];
+  const selectedStatus = equipmentFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "ACTIVE" : "ACTIVE";
+  const equipmentCounts = new Map<string, number>();
+  const filteredEquipment =
+    equipment?.filter((asset) => {
+      equipmentCounts.set(asset.status, (equipmentCounts.get(asset.status) ?? 0) + 1);
+
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      return asset.status === selectedStatus;
+    }) ?? [];
+  const filterCountByKey = (key: string) => {
+    if (key === "all") {
+      return equipment?.length ?? 0;
+    }
+
+    return equipmentCounts.get(key) ?? 0;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -123,6 +151,18 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
       {equipmentError ? (
         <ErrorState title="Equipment unavailable" message="The equipment list could not be loaded." />
       ) : equipment && equipment.length > 0 ? (
+        <>
+        <FilterBar
+          description="Active assets can be assigned to maintenance jobs. Out-of-service and retired assets stay visible for register history."
+          items={equipmentFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "ACTIVE" ? "/equipment" : `/equipment?status=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedStatus}
+        />
+        {filteredEquipment.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <colgroup>
@@ -144,7 +184,7 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
               </tr>
             </thead>
             <tbody>
-              {equipment.map((asset) => (
+              {filteredEquipment.map((asset) => (
                 <tr key={asset.id}>
                   <td>
                     <strong>{asset.asset_code}</strong>
@@ -167,6 +207,10 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
             </tbody>
           </table>
         </Card>
+        ) : (
+          <EmptyState title="No assets in this view" message="Choose another asset status filter." />
+        )}
+        </>
       ) : (
         <EmptyState title="No equipment registered" message="Create a building, system, then register the first asset." />
       )}

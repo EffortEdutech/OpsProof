@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSiteRecord } from "@/app/(dashboard)/sites/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -12,8 +13,15 @@ type SitesPageProps = {
   searchParams?: Promise<{
     created?: string;
     error?: string;
+    status?: string;
   }>;
 };
+
+const siteFilters = [
+  { key: "active", label: "Active" },
+  { key: "inactive", label: "Inactive" },
+  { key: "all", label: "All sites" }
+];
 
 const fieldStyle = {
   minHeight: 44,
@@ -40,6 +48,28 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
   ]);
 
   const hasClients = Boolean(clients && clients.length > 0);
+  const selectedStatus = siteFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "active" : "active";
+  const activeSiteCount = sites?.filter((site) => site.active).length ?? 0;
+  const inactiveSiteCount = sites?.filter((site) => !site.active).length ?? 0;
+  const filteredSites =
+    sites?.filter((site) => {
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      return selectedStatus === "active" ? site.active : !site.active;
+    }) ?? [];
+  const filterCountByKey = (key: string) => {
+    if (key === "inactive") {
+      return inactiveSiteCount;
+    }
+
+    if (key === "all") {
+      return sites?.length ?? 0;
+    }
+
+    return activeSiteCount;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -83,6 +113,18 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
       {sitesError ? (
         <ErrorState title="Sites unavailable" message="The site list could not be loaded." />
       ) : sites && sites.length > 0 ? (
+        <>
+        <FilterBar
+          description="Active sites are available for buildings, asset registration, and maintenance planning."
+          items={siteFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "active" ? "/sites" : `/sites?status=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedStatus}
+        />
+        {filteredSites.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <colgroup>
@@ -102,7 +144,7 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
               </tr>
             </thead>
             <tbody>
-              {sites.map((site) => (
+              {filteredSites.map((site) => (
                 <tr key={site.id}>
                   <td>
                     <strong>{site.name}</strong>
@@ -120,6 +162,10 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
             </tbody>
           </table>
         </Card>
+        ) : (
+          <EmptyState title="No sites in this view" message="Choose another site status filter." />
+        )}
+        </>
       ) : (
         <EmptyState title="No sites yet" message="Create the first client location to unlock job planning." />
       )}
