@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { requireProfile } from "@/lib/auth/current-user";
 import { canAccessTechnician } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -45,25 +46,6 @@ const technicianJobFilters = [
 ];
 
 const activeTechnicianStatuses = new Set(["SCHEDULED", "IN_PROGRESS"]);
-
-function StatusBadge({ children }: { children: string }) {
-  return (
-    <span
-      style={{
-        background: "#eef2f6",
-        border: "1px solid var(--border)",
-        borderRadius: 999,
-        display: "inline-block",
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "4px 10px",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </span>
-  );
-}
 
 export default async function TechnicianTodayPage({ searchParams }: TechnicianTodayPageProps) {
   const profile = await requireProfile();

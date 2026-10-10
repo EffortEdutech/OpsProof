@@ -4,6 +4,8 @@ import { addFinding, completeAssetInspection, saveInspectionResult, startAssetIn
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { SummaryField } from "@/components/ui/summary-field";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessTechnician } from "@/lib/permissions/roles";
@@ -39,34 +41,6 @@ const jobStatusLabel = {
   COMPLETED: "Completed",
   CANCELLED: "Cancelled"
 };
-
-function StatusBadge({ children }: { children: string }) {
-  return (
-    <span
-      style={{
-        background: "#eef2f6",
-        border: "1px solid var(--border)",
-        borderRadius: 999,
-        display: "inline-block",
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "4px 10px",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>{label}</div>
-      <strong style={{ display: "block", marginTop: 4 }}>{value}</strong>
-    </div>
-  );
-}
 
 export default async function TechnicianJobPage({ params, searchParams }: TechnicianJobPageProps) {
   const profile = await requireProfile();
@@ -215,12 +189,12 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
 
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-          <Field label="Scheduled" value={job.scheduled_date} />
-          <Field label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
-          <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
-          <Field label="Assets" value={assignedAssetCount > 0 ? `${assignedAssetCount} assigned` : "0"} />
-          <Field label="Checklist" value={checklistProgress} />
-          <Field label="Findings" value={`${findings?.length ?? 0}`} />
+          <SummaryField label="Scheduled" value={job.scheduled_date} />
+          <SummaryField label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
+          <SummaryField label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
+          <SummaryField label="Assets" value={assignedAssetCount > 0 ? `${assignedAssetCount} assigned` : "0"} />
+          <SummaryField label="Checklist" value={checklistProgress} />
+          <SummaryField label="Findings" value={`${findings?.length ?? 0}`} />
         </div>
       </Card>
 

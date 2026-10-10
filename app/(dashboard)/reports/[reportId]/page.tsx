@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { ChecklistResults } from "@/components/ui/checklist-results";
 import { PrintButton } from "@/components/ui/print-button";
 import { EmptyState } from "@/components/ui/states";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { SummaryField } from "@/components/ui/summary-field";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
@@ -24,34 +26,6 @@ const reportStatusLabel = {
   ISSUED: "Issued",
   VOID: "Void"
 };
-
-function StatusBadge({ children }: { children: string }) {
-  return (
-    <span
-      style={{
-        background: "#eef2f6",
-        border: "1px solid var(--border)",
-        borderRadius: 999,
-        display: "inline-block",
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "4px 10px",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>{label}</div>
-      <strong style={{ display: "block", marginTop: 4 }}>{value}</strong>
-    </div>
-  );
-}
 
 export default async function ReportDetailPage({ params }: ReportDetailPageProps) {
   const profile = await requireProfile();
@@ -159,15 +133,15 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>1. Report summary</h2>
         <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-          <Field label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
-          <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
-          <Field label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
-          <Field label="Scheduled" value={report.maintenance_jobs?.scheduled_date ?? "Not set"} />
-          <Field label="Generated" value={formatDate(report.generated_at)} />
-          <Field label="Issued" value={formatDate(report.issued_at)} />
-          <Field label="Findings" value={`${findings?.length ?? 0}`} />
-          <Field label="Checklist" value={`${checklistResultCount} result${checklistResultCount === 1 ? "" : "s"}`} />
-          <Field label="Type" value="Maintenance" />
+          <SummaryField label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
+          <SummaryField label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
+          <SummaryField label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
+          <SummaryField label="Scheduled" value={report.maintenance_jobs?.scheduled_date ?? "Not set"} />
+          <SummaryField label="Generated" value={formatDate(report.generated_at)} />
+          <SummaryField label="Issued" value={formatDate(report.issued_at)} />
+          <SummaryField label="Findings" value={`${findings?.length ?? 0}`} />
+          <SummaryField label="Checklist" value={`${checklistResultCount} result${checklistResultCount === 1 ? "" : "s"}`} />
+          <SummaryField label="Type" value="Maintenance" />
         </div>
       </Card>
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
@@ -45,25 +46,6 @@ const reportStatusFilters = [
 ];
 
 const activeReportStatuses = new Set(["GENERATED", "REVIEWED"]);
-
-function StatusBadge({ children }: { children: string }) {
-  return (
-    <span
-      style={{
-        background: "#eef2f6",
-        border: "1px solid var(--border)",
-        borderRadius: 999,
-        display: "inline-block",
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "4px 10px",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </span>
-  );
-}
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const profile = await requireProfile();

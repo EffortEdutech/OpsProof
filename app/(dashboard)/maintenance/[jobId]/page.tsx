@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChecklistResults } from "@/components/ui/checklist-results";
 import { EmptyState } from "@/components/ui/states";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { SummaryField } from "@/components/ui/summary-field";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
@@ -32,34 +34,6 @@ const reportStatusLabel = {
   ISSUED: "Issued",
   VOID: "Void"
 };
-
-function StatusBadge({ children }: { children: string }) {
-  return (
-    <span
-      style={{
-        background: "#eef2f6",
-        border: "1px solid var(--border)",
-        borderRadius: 999,
-        display: "inline-block",
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "4px 10px",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>{label}</div>
-      <strong style={{ display: "block", marginTop: 4 }}>{value}</strong>
-    </div>
-  );
-}
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const profile = await requireProfile();
@@ -182,12 +156,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-          <Field label="Technician" value={technician?.full_name ?? "Unassigned"} />
-          <Field label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
-          <Field label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
-          <Field label="Scheduled" value={job.scheduled_date} />
-          <Field label="Completed" value={formatDate(job.completed_at)} />
-          <Field
+          <SummaryField label="Technician" value={technician?.full_name ?? "Unassigned"} />
+          <SummaryField label="Plan" value={job.maintenance_plans?.name ?? "Ad hoc"} />
+          <SummaryField label="Frequency" value={job.maintenance_plans?.frequency ?? "Not set"} />
+          <SummaryField label="Scheduled" value={job.scheduled_date} />
+          <SummaryField label="Completed" value={formatDate(job.completed_at)} />
+          <SummaryField
             label="Assets"
             value={
               assignedAssetCount > 0
@@ -195,10 +169,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 : "0"
             }
           />
-          <Field label="Checklist" value={checklistProgress} />
-          <Field label="Findings" value={`${findings?.length ?? 0}`} />
-          <Field label="Report" value={reports?.[0]?.report_number ?? "No report"} />
-          <Field label="Issued" value={formatDate(issuedReport?.issued_at ?? null)} />
+          <SummaryField label="Checklist" value={checklistProgress} />
+          <SummaryField label="Findings" value={`${findings?.length ?? 0}`} />
+          <SummaryField label="Report" value={reports?.[0]?.report_number ?? "No report"} />
+          <SummaryField label="Issued" value={formatDate(issuedReport?.issued_at ?? null)} />
         </div>
       </Card>
 
