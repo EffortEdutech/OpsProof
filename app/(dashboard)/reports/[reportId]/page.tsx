@@ -11,6 +11,7 @@ import { SummaryField } from "@/components/ui/summary-field";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
+import { fetchIssuedReportData } from "@/lib/reports/issued-report-data";
 import { createClient } from "@/lib/supabase/server";
 
 type ReportDetailPageProps = {
@@ -36,81 +37,11 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
 
   const { reportId } = await params;
   const supabase = await createClient();
-  const { data: report, error } = await supabase
-    .from("reports")
-    .select("id,job_id,report_number,title,status,generated_at,issued_at,maintenance_jobs(job_number,scheduled_date,clients(name),sites(name))")
-    .eq("id", reportId)
-    .single();
+  const { data: reportData, error } = await fetchIssuedReportData(supabase, reportId);
 
-  if (error || !report) {
+  if (error || !reportData) {
     notFound();
   }
-
-  const { data: findings, error: findingsError } = await supabase
-    .from("findings")
-    .select("id,title,severity,status,description,recommendation,created_at")
-    .eq("job_id", report.job_id)
-    .order("created_at", { ascending: false });
-  const { data: jobEquipment } = await supabase
-    .from("job_equipment")
-    .select("id,equipment(asset_code)")
-    .eq("job_id", report.job_id)
-    .order("created_at", { ascending: true });
-  const jobEquipmentIds = jobEquipment?.map((asset) => asset.id) ?? [];
-  const { data: inspections, error: inspectionsError } =
-    jobEquipmentIds.length > 0
-      ? await supabase
-          .from("inspections")
-          .select("id,job_equipment_id,template_id,status,inspection_templates(name)")
-          .in("job_equipment_id", jobEquipmentIds)
-      : { data: [], error: null };
-  const inspectionIds = inspections?.map((inspection) => inspection.id) ?? [];
-  const templateIds = inspections?.map((inspection) => inspection.template_id) ?? [];
-  const [{ data: templateItems, error: templateItemsError }, { data: inspectionResults, error: resultsError }] = await Promise.all([
-    templateIds.length > 0
-      ? supabase
-          .from("inspection_template_items")
-          .select("id,template_id,prompt,sort_order")
-          .in("template_id", templateIds)
-          .order("sort_order", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    inspectionIds.length > 0
-      ? supabase
-          .from("inspection_results")
-          .select("id,inspection_id,template_item_id,result_status")
-          .in("inspection_id", inspectionIds)
-      : Promise.resolve({ data: [], error: null })
-  ]);
-  const assetById = new Map(jobEquipment?.map((asset) => [asset.id, asset]) ?? []);
-  const itemsByTemplateId = new Map<string, NonNullable<typeof templateItems>>();
-  const resultByInspectionAndItem = new Map<string, NonNullable<typeof inspectionResults>[number]>();
-
-  templateItems?.forEach((item) => {
-    const current = itemsByTemplateId.get(item.template_id) ?? [];
-    itemsByTemplateId.set(item.template_id, [...current, item]);
-  });
-
-  inspectionResults?.forEach((result) => {
-    resultByInspectionAndItem.set(`${result.inspection_id}:${result.template_item_id}`, result);
-  });
-  const checklistGroups =
-    inspections?.map((inspection) => {
-      const asset = assetById.get(inspection.job_equipment_id);
-      const checklistItems = itemsByTemplateId.get(inspection.template_id) ?? [];
-
-      return {
-        id: inspection.id,
-        assetCode: asset?.equipment?.asset_code ?? "Asset",
-        checklistName: inspection.inspection_templates?.name ?? "Checklist",
-        status: inspection.status,
-        items: checklistItems.map((item) => ({
-          id: item.id,
-          prompt: item.prompt,
-          resultStatus: resultByInspectionAndItem.get(`${inspection.id}:${item.id}`)?.result_status ?? null
-        }))
-      };
-    }) ?? [];
-  const checklistResultCount = inspectionResults?.length ?? 0;
 
   return (
     <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
@@ -119,45 +50,48 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
           <Link className="no-print" href="/reports" style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
             Back to reports
           </Link>
-          <h1 style={{ margin: "0.5rem 0 0", fontSize: "1.75rem" }}>{report.report_number}</h1>
-          <div style={{ color: "var(--muted)", marginTop: 4 }}>{report.title ?? "Untitled report"}</div>
+          <h1 style={{ margin: "0.5rem 0 0", fontSize: "1.75rem" }}>{reportData.report.reportNumber}</h1>
+          <div style={{ color: "var(--muted)", marginTop: 4 }}>{reportData.report.title ?? "Untitled report"}</div>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <div className="no-print">
             <PrintButton />
           </div>
-          <StatusBadge>{reportStatusLabel[report.status] ?? report.status}</StatusBadge>
+          <StatusBadge>{reportStatusLabel[reportData.report.status] ?? reportData.report.status}</StatusBadge>
         </div>
       </div>
 
       <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>1. Report summary</h2>
         <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-          <SummaryField label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
-          <SummaryField label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
-          <SummaryField label="Job" value={report.maintenance_jobs?.job_number ?? "Not set"} />
-          <SummaryField label="Scheduled" value={report.maintenance_jobs?.scheduled_date ?? "Not set"} />
-          <SummaryField label="Generated" value={formatDate(report.generated_at)} />
-          <SummaryField label="Issued" value={formatDate(report.issued_at)} />
-          <SummaryField label="Findings" value={`${findings?.length ?? 0}`} />
-          <SummaryField label="Checklist" value={`${checklistResultCount} result${checklistResultCount === 1 ? "" : "s"}`} />
+          <SummaryField label="Client" value={reportData.client.name} />
+          <SummaryField label="Site" value={reportData.site.name} />
+          <SummaryField label="Job" value={reportData.job.jobNumber} />
+          <SummaryField label="Scheduled" value={reportData.job.scheduledDate} />
+          <SummaryField label="Generated" value={formatDate(reportData.report.generatedAt)} />
+          <SummaryField label="Issued" value={formatDate(reportData.report.issuedAt)} />
+          <SummaryField label="Findings" value={`${reportData.summary.findingCount}`} />
+          <SummaryField
+            label="Checklist"
+            value={`${reportData.summary.checklistResultCount} result${reportData.summary.checklistResultCount === 1 ? "" : "s"}`}
+          />
           <SummaryField label="Type" value="Maintenance" />
         </div>
       </Card>
 
       <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>2. Field evidence</h2>
-        {findingsError ? (
+        {reportData.loadErrors.findings ? (
           <EmptyState title="Evidence unavailable" message="Captured findings could not be loaded." />
-        ) : findings && findings.length > 0 ? (
+        ) : reportData.findings.length > 0 ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
-            {findings.map((finding) => (
+            {reportData.findings.map((finding) => (
               <div key={finding.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
                   <strong>{finding.title}</strong>
                   <StatusBadge>{finding.severity}</StatusBadge>
                 </div>
-                <div style={{ color: "var(--muted)", marginTop: 4 }}>{finding.status} / {formatDate(finding.created_at)}</div>
+                <div style={{ color: "var(--muted)", marginTop: 4 }}>{finding.status} / {formatDate(finding.createdAt)}</div>
                 {finding.description ? <div style={{ marginTop: 8 }}>{finding.description}</div> : null}
                 {finding.recommendation ? <div style={{ color: "var(--muted)", marginTop: 8 }}>Recommendation: {finding.recommendation}</div> : null}
               </div>
@@ -170,47 +104,47 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
 
       <Card className="print-section">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>3. Checklist evidence</h2>
-        {inspectionsError || templateItemsError || resultsError ? (
+        {reportData.loadErrors.inspections || reportData.loadErrors.templateItems || reportData.loadErrors.inspectionResults ? (
           <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
         ) : (
           <ChecklistResults
             emptyTitle="No checklist results"
             emptyMessage="This report has no structured checklist results attached."
-            groups={checklistGroups}
+            groups={reportData.checklistGroups}
           />
         )}
       </Card>
 
       <Card className="no-print">
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>4. Report action</h2>
-        {report.status === "GENERATED" ? (
+        {reportData.report.status === "GENERATED" ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
               Mark reviewed after confirming the field evidence and checklist evidence above.
             </div>
             <form action={reviewReport}>
-              <input name="report_id" type="hidden" value={report.id} />
+              <input name="report_id" type="hidden" value={reportData.report.id} />
               <Button type="submit" variant="secondary">
                 Mark Reviewed
               </Button>
             </form>
           </div>
         ) : null}
-        {report.status === "REVIEWED" ? (
+        {reportData.report.status === "REVIEWED" ? (
           <div style={{ display: "grid", gap: "0.75rem" }}>
             <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
               Issue this report to make it visible in the client portal. Issuing also closes the maintenance job.
             </div>
             <form action={issueReport}>
-              <input name="report_id" type="hidden" value={report.id} />
+              <input name="report_id" type="hidden" value={reportData.report.id} />
               <Button type="submit">Issue Report</Button>
             </form>
           </div>
         ) : null}
-        {report.status === "ISSUED" ? (
+        {reportData.report.status === "ISSUED" ? (
           <div>Issued reports are visible to the scoped client portal. The maintenance job is closed after issue.</div>
         ) : null}
-        {report.status !== "GENERATED" && report.status !== "REVIEWED" && report.status !== "ISSUED" ? (
+        {reportData.report.status !== "GENERATED" && reportData.report.status !== "REVIEWED" && reportData.report.status !== "ISSUED" ? (
           <div style={{ color: "var(--muted)" }}>No action is available for this report state.</div>
         ) : null}
       </Card>
