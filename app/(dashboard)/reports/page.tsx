@@ -16,6 +16,7 @@ type ReportsPageProps = {
     issued?: string;
     error?: string;
     reviewed?: string;
+    status?: string;
   }>;
 };
 
@@ -33,6 +34,16 @@ const reportStatusLabel = {
   ISSUED: "Issued",
   VOID: "Void"
 };
+
+const reportStatusFilters = [
+  { key: "active", label: "Action needed" },
+  { key: "GENERATED", label: "Generated" },
+  { key: "REVIEWED", label: "Ready to issue" },
+  { key: "ISSUED", label: "Issued" },
+  { key: "all", label: "All reports" }
+];
+
+const activeReportStatuses = new Set(["GENERATED", "REVIEWED"]);
 
 function StatusBadge({ children }: { children: string }) {
   return (
@@ -126,6 +137,34 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const reportedJobIds = new Set(reports?.filter((report) => report.status !== "VOID").map((report) => report.job_id) ?? []);
   const reportableJobs = jobs?.filter((job) => !reportedJobIds.has(job.id)) ?? [];
   const hasJobs = reportableJobs.length > 0;
+  const selectedStatus = reportStatusFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "active" : "active";
+  const reportCounts = new Map<string, number>();
+  const filteredReports =
+    reports?.filter((report) => {
+      reportCounts.set(report.status, (reportCounts.get(report.status) ?? 0) + 1);
+
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      if (selectedStatus === "active") {
+        return activeReportStatuses.has(report.status);
+      }
+
+      return report.status === selectedStatus;
+    }) ?? [];
+  const activeReportCount = reports?.filter((report) => activeReportStatuses.has(report.status)).length ?? 0;
+  const filterCountByKey = (key: string) => {
+    if (key === "all") {
+      return reports?.length ?? 0;
+    }
+
+    if (key === "active") {
+      return activeReportCount;
+    }
+
+    return reportCounts.get(key) ?? 0;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -189,6 +228,37 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       ) : findingsError || jobEquipmentError || inspectionsError || resultsError ? (
         <ErrorState title="Evidence unavailable" message="Captured findings could not be loaded." />
       ) : reports && reports.length > 0 ? (
+        <>
+        <Card>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {reportStatusFilters.map((filter) => {
+              const selected = selectedStatus === filter.key;
+
+              return (
+                <Link
+                  aria-current={selected ? "page" : undefined}
+                  href={filter.key === "active" ? "/reports" : `/reports?status=${filter.key}`}
+                  key={filter.key}
+                  style={{
+                    background: selected ? "var(--accent)" : "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 6,
+                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
+                    fontWeight: 700,
+                    padding: "8px 10px",
+                    textDecoration: "none"
+                  }}
+                >
+                  {filter.label} ({filterCountByKey(filter.key)})
+                </Link>
+              );
+            })}
+          </div>
+          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+            Action needed shows generated reports awaiting review and reviewed reports ready to issue. Use Issued or All reports for history.
+          </div>
+        </Card>
+        {filteredReports.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <colgroup>
@@ -216,7 +286,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </tr>
             </thead>
             <tbody>
-              {reports.map((report) => {
+              {filteredReports.map((report) => {
                 const reportFindings = findingsByJobId.get(report.job_id) ?? [];
                 const checklistResultCount = checklistResultCountByJobId.get(report.job_id) ?? 0;
                 const evidenceParts = [];
@@ -288,6 +358,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             </tbody>
           </table>
         </Card>
+        ) : (
+          <EmptyState title="No reports in this view" message="Choose another status filter or generate a new report shell." />
+        )}
+        </>
       ) : (
         <EmptyState title="No reports yet" message="Start management review on a job, then generate the first report shell." />
       )}
