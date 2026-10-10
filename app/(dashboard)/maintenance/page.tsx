@@ -150,7 +150,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
-      <PageHeader title="Maintenance" description="Create the first plan and scheduled job for a client site." />
+      <PageHeader title="Maintenance" description="Schedule work, follow field progress, start management review, and hand completed jobs to reporting." />
       {params?.created ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
           Maintenance plan and job created.
@@ -312,7 +312,11 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                           )}
                         </div>
                       ) : null}
-                      {job.status === "UNDER_REVIEW" ? "Ready for report generation" : null}
+                      {job.status === "UNDER_REVIEW" ? (
+                        <Link href="/reports" style={{ color: "var(--accent)", fontWeight: 700 }}>
+                          Generate report
+                        </Link>
+                      ) : null}
                       {job.status === "COMPLETED" ? "Closed" : null}
                       {report?.status === "ISSUED" && job.status !== "COMPLETED" ? (
                         <form action={closeJobFromIssuedReport}>
@@ -329,6 +333,9 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
                         <div style={{ display: "grid", gap: 4 }}>
                           <strong>{report.report_number}</strong>
                           <span style={{ color: "var(--muted)" }}>{reportStatusLabel[report.status] ?? report.status} {report.issued_at ? `- ${formatDate(report.issued_at)}` : ""}</span>
+                          <Link href={`/reports/${report.id}`} style={{ color: "var(--accent)", fontWeight: 700 }}>
+                            Open report
+                          </Link>
                         </div>
                       ) : (
                         "No report"

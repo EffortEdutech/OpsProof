@@ -215,22 +215,31 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
                       {job.status === "SCHEDULED" ? (
                         <form action={startJob}>
                           <input name="job_id" type="hidden" value={job.id} />
-                          <input name="next" type="hidden" value="/technician/today" />
+                          <input name="next" type="hidden" value={`/technician/jobs/${job.id}`} />
                           <Button type="submit">Start</Button>
                         </form>
                       ) : null}
                       {job.status === "IN_PROGRESS" ? (
                         <div style={{ display: "grid", gap: 6 }}>
-                          <form action={submitJob}>
-                            <input name="job_id" type="hidden" value={job.id} />
-                            <input name="next" type="hidden" value="/technician/today" />
-                            <Button disabled={!canSubmit} type="submit" variant="secondary">
-                              Submit
-                            </Button>
-                          </form>
                           {!canSubmit ? (
-                            <span style={{ color: "var(--muted)", fontSize: "0.8125rem" }}>Complete checklist first</span>
-                          ) : null}
+                            <>
+                              <Link
+                                href={`/technician/jobs/${job.id}`}
+                                style={{ color: "var(--accent)", fontSize: "0.875rem", fontWeight: 700 }}
+                              >
+                                Open checklist
+                              </Link>
+                              <span style={{ color: "var(--muted)", fontSize: "0.8125rem" }}>Complete checklist first</span>
+                            </>
+                          ) : (
+                            <form action={submitJob}>
+                              <input name="job_id" type="hidden" value={job.id} />
+                              <input name="next" type="hidden" value="/technician/today" />
+                              <Button type="submit" variant="secondary">
+                                Submit
+                              </Button>
+                            </form>
+                          )}
                         </div>
                       ) : null}
                       {job.status === "SUBMITTED" ? (

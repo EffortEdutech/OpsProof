@@ -284,7 +284,14 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             )}
           </div>
         ) : null}
-        {job.status === "UNDER_REVIEW" ? <div>Ready for report generation from the Reports page.</div> : null}
+        {job.status === "UNDER_REVIEW" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div>Ready for report generation.</div>
+            <Link href="/reports" style={{ color: "var(--accent)", fontWeight: 700 }}>
+              Go to Reports
+            </Link>
+          </div>
+        ) : null}
         {issuedReport && job.status !== "COMPLETED" ? (
           <form action={closeJobFromIssuedReport}>
             <input name="job_id" type="hidden" value={job.id} />
@@ -306,7 +313,9 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             {reports.map((report) => (
               <div key={report.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center" }}>
                 <div>
-                  <strong>{report.report_number}</strong>
+                  <Link href={`/reports/${report.id}`}>
+                    <strong>{report.report_number}</strong>
+                  </Link>
                   <div style={{ color: "var(--muted)", marginTop: 4 }}>{report.title ?? "Untitled report"}</div>
                   <div style={{ color: "var(--muted)", marginTop: 4 }}>Generated {formatDate(report.generated_at)}</div>
                 </div>
