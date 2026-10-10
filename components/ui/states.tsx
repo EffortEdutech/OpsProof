@@ -21,3 +21,19 @@ export function ErrorState({ title, message }: { title: string; message: string 
     </Card>
   );
 }
+
+export function SuccessState({ message }: { message: string }) {
+  return (
+    <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
+      {message}
+    </Card>
+  );
+}
+
+export function AlertState({ message }: { message: string }) {
+  return (
+    <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
+      {message}
+    </Card>
+  );
+}

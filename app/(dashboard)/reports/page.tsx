@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
@@ -153,19 +153,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Reports" description="Generate, review, and issue report records from completed maintenance evidence." />
       {params?.created ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report shell generated. Open it to review field and checklist evidence.
-        </Card>
+        <SuccessState message="Report shell generated. Open it to review field and checklist evidence." />
       ) : null}
       {params?.reviewed ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report reviewed. It is ready to issue to the client portal.
-        </Card>
+        <SuccessState message="Report reviewed. It is ready to issue to the client portal." />
       ) : null}
       {params?.issued ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report issued. The maintenance job is closed and the report is visible to the client.
-        </Card>
+        <SuccessState message="Report issued. The maintenance job is closed and the report is visible to the client." />
       ) : null}
       {params?.error ? (
         <ErrorState

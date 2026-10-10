@@ -3,7 +3,7 @@ import { createSiteRecord } from "@/app/(dashboard)/sites/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { canAccessManagement } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -45,9 +45,7 @@ export default async function SitesPage({ searchParams }: SitesPageProps) {
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Sites" description="Create client locations before planning maintenance jobs." />
       {params?.created ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Site created.
-        </Card>
+        <SuccessState message="Site created." />
       ) : null}
       {params?.error ? (
         <ErrorState

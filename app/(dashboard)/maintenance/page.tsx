@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
 import { canAccessManagement } from "@/lib/permissions/roles";
@@ -176,19 +176,13 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Maintenance" description="Schedule work, follow field progress, start management review, and hand completed jobs to reporting." />
       {params?.created ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Maintenance plan and job created.
-        </Card>
+        <SuccessState message="Maintenance plan and job created." />
       ) : null}
       {params?.review ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job moved under management review.
-        </Card>
+        <SuccessState message="Job moved under management review." />
       ) : null}
       {params?.closed ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job closed from issued report.
-        </Card>
+        <SuccessState message="Job closed from issued report." />
       ) : null}
       {params?.error ? (
         <ErrorState

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createBuildingRecord, createEquipmentRecord, createSystemRecord } from "@/app/(dashboard)/equipment/actions";
 import { EquipmentForms } from "@/app/(dashboard)/equipment/equipment-forms";
 import { Card } from "@/components/ui/card";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireProfile } from "@/lib/auth/current-user";
 import { canAccessManagement } from "@/lib/permissions/roles";
@@ -76,19 +76,13 @@ export default async function EquipmentPage({ searchParams }: EquipmentPageProps
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Equipment" description="Register buildings, fire systems, and maintainable assets." />
       {params?.building ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Building created.
-        </Card>
+        <SuccessState message="Building created." />
       ) : null}
       {params?.system ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          System created.
-        </Card>
+        <SuccessState message="System created." />
       ) : null}
       {params?.equipment ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Equipment registered.
-        </Card>
+        <SuccessState message="Equipment registered." />
       ) : null}
       {params?.error ? (
         <ErrorState

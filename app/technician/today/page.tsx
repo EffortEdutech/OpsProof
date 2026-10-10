@@ -4,7 +4,7 @@ import { addFinding, startJob, submitJob } from "@/app/technician/today/actions"
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { EmptyState } from "@/components/ui/states";
+import { AlertState, EmptyState, SuccessState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -138,28 +138,22 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Today" description="Start assigned jobs and capture field findings." />
       {params?.started ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job started.
-        </Card>
+        <SuccessState message="Job started." />
       ) : null}
       {params?.finding ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Finding captured.
-        </Card>
+        <SuccessState message="Finding captured." />
       ) : null}
       {params?.submitted ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job submitted for management review.
-        </Card>
+        <SuccessState message="Job submitted for management review." />
       ) : null}
       {params?.error ? (
-        <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
-          {params.error === "job-not-started"
+        <AlertState
+          message={params.error === "job-not-started"
             ? "Start the job before capturing findings."
             : params.error === "equipment-not-assigned"
               ? "Choose an asset assigned to this job."
               : "Field action failed."}
-        </Card>
+        />
       ) : null}
       {jobsError || jobEquipmentError || inspectionsError ? (
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />

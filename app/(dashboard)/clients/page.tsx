@@ -3,7 +3,7 @@ import { createClientRecord } from "@/app/(dashboard)/clients/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SuccessState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
 import { canAccessManagement } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -40,9 +40,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
     <div style={{ display: "grid", gap: "1rem" }}>
       <PageHeader title="Clients" description="Register and review client accounts for the current organisation." />
         {params?.created ? (
-          <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-            Client created.
-          </Card>
+          <SuccessState message="Client created." />
         ) : null}
         {params?.error ? (
           <ErrorState

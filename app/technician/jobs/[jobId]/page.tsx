@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { addFinding, completeAssetInspection, saveInspectionResult, startAssetInspection, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/states";
+import { AlertState, EmptyState, SuccessState } from "@/components/ui/states";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SummaryField } from "@/components/ui/summary-field";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -142,38 +142,26 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       </div>
 
       {query?.started ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job started.
-        </Card>
+        <SuccessState message="Job started." />
       ) : null}
       {query?.finding ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Finding captured.
-        </Card>
+        <SuccessState message="Finding captured." />
       ) : null}
       {query?.submitted ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Job submitted for management review.
-        </Card>
+        <SuccessState message="Job submitted for management review." />
       ) : null}
       {query?.inspection ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Asset inspection started.
-        </Card>
+        <SuccessState message="Asset inspection started." />
       ) : null}
       {query?.inspectionCompleted ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Asset inspection completed.
-        </Card>
+        <SuccessState message="Asset inspection completed." />
       ) : null}
       {query?.result ? (
-        <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Checklist result saved.
-        </Card>
+        <SuccessState message="Checklist result saved." />
       ) : null}
       {query?.error ? (
-        <Card role="alert" style={{ borderColor: "#f0b4ae", color: "#8a1f17" }}>
-          {query.error === "job-not-started"
+        <AlertState
+          message={query.error === "job-not-started"
             ? "Start the job before capturing findings."
             : query.error === "missing-template"
               ? "No active checklist template is available for this asset type."
@@ -184,7 +172,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
                   : query.error === "invalid-checklist-item"
                     ? "The checklist item does not belong to this inspection."
                 : "Field action failed."}
-        </Card>
+        />
       ) : null}
 
       <Card>
