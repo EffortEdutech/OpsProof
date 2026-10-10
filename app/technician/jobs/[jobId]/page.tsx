@@ -150,6 +150,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
     assignedAssetCount === 0
       ? "No assets assigned"
       : `${completedAssetCount}/${assignedAssetCount} complete`;
+  const nextChecklistAsset = jobEquipment?.find((asset) => !inspectionsByAssetId.has(asset.id));
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -224,6 +225,65 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
       </Card>
 
       <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Next field action</h2>
+        {job.status === "SCHEDULED" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Start the job to unlock assigned asset checklists and finding capture.
+            </div>
+            <form action={startJob}>
+              <input name="job_id" type="hidden" value={job.id} />
+              <input name="next" type="hidden" value={next} />
+              <Button type="submit">Start Job</Button>
+            </form>
+          </div>
+        ) : null}
+        {job.status === "IN_PROGRESS" && nextChecklistAsset ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div>
+              <strong>{nextChecklistAsset.equipment?.asset_code ?? "Asset"}</strong>
+              <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: 4 }}>
+                Start this asset checklist before submitting for management review.
+              </div>
+            </div>
+            <form action={startAssetInspection}>
+              <input name="job_equipment_id" type="hidden" value={nextChecklistAsset.id} />
+              <input name="next" type="hidden" value={next} />
+              <Button type="submit">Start Checklist</Button>
+            </form>
+          </div>
+        ) : null}
+        {job.status === "IN_PROGRESS" && !nextChecklistAsset && !assignedAssetsComplete ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Continue the checklist in progress, then complete it before submitting.
+            </div>
+            <a href="#asset-checklists" style={{ color: "var(--accent)", fontWeight: 700 }}>
+              Go to checklist
+            </a>
+          </div>
+        ) : null}
+        {job.status === "IN_PROGRESS" && assignedAssetsComplete ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Checklist evidence is complete. Submit the job for management review when field findings are done.
+            </div>
+            <form action={submitJob}>
+              <input name="job_id" type="hidden" value={job.id} />
+              <input name="next" type="hidden" value={next} />
+              <Button type="submit" variant="secondary">
+                Submit for Review
+              </Button>
+            </form>
+          </div>
+        ) : null}
+        {job.status === "SUBMITTED" ? <div>Submitted jobs are locked for management review.</div> : null}
+        {job.status !== "SCHEDULED" && job.status !== "IN_PROGRESS" && job.status !== "SUBMITTED" ? (
+          <div style={{ color: "var(--muted)" }}>No field action is available for this job state.</div>
+        ) : null}
+      </Card>
+
+      <Card>
         <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Field workflow</h2>
         <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", paddingBottom: "1rem" }}>
           <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.75rem" }}>1. Start field work</h3>
@@ -244,7 +304,7 @@ export default async function TechnicianJobPage({ params, searchParams }: Techni
             <div style={{ color: "var(--muted)" }}>No field action is available for this job state.</div>
           ) : null}
         </div>
-        <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.5rem" }}>2. Complete assigned asset checklists</h3>
+        <h3 id="asset-checklists" style={{ fontSize: "0.95rem", margin: "0 0 0.5rem" }}>2. Complete assigned asset checklists</h3>
         <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
           {assignedAssetCount > 0
             ? `${startedInspectionCount}/${assignedAssetCount} started, ${completedAssetCount}/${assignedAssetCount} complete`
