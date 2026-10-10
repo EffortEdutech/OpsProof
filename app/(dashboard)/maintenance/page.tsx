@@ -17,6 +17,7 @@ type MaintenancePageProps = {
     closed?: string;
     error?: string;
     review?: string;
+    status?: string;
   }>;
 };
 
@@ -36,6 +37,18 @@ const reportStatusLabel = {
   ISSUED: "Issued",
   VOID: "Void"
 };
+
+const jobStatusFilters = [
+  { key: "active", label: "Active work" },
+  { key: "SCHEDULED", label: "Scheduled" },
+  { key: "IN_PROGRESS", label: "In progress" },
+  { key: "SUBMITTED", label: "Awaiting review" },
+  { key: "UNDER_REVIEW", label: "Ready for report" },
+  { key: "COMPLETED", label: "Completed" },
+  { key: "all", label: "All jobs" }
+];
+
+const activeJobStatuses = new Set(["SCHEDULED", "IN_PROGRESS", "SUBMITTED", "UNDER_REVIEW"]);
 
 function StatusBadge({ children }: { children: string }) {
   return (
@@ -147,6 +160,34 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       reportsByJobId.set(report.job_id, report);
     }
   });
+  const selectedStatus = jobStatusFilters.some((filter) => filter.key === params?.status) ? params?.status ?? "active" : "active";
+  const jobCounts = new Map<string, number>();
+  const filteredJobs =
+    jobs?.filter((job) => {
+      jobCounts.set(job.status, (jobCounts.get(job.status) ?? 0) + 1);
+
+      if (selectedStatus === "all") {
+        return true;
+      }
+
+      if (selectedStatus === "active") {
+        return activeJobStatuses.has(job.status);
+      }
+
+      return job.status === selectedStatus;
+    }) ?? [];
+  const activeJobCount = jobs?.filter((job) => activeJobStatuses.has(job.status)).length ?? 0;
+  const filterCountByKey = (key: string) => {
+    if (key === "all") {
+      return jobs?.length ?? 0;
+    }
+
+    if (key === "active") {
+      return activeJobCount;
+    }
+
+    return jobCounts.get(key) ?? 0;
+  };
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -203,6 +244,37 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
       {jobsError || reportsError || findingsError || jobEquipmentError ? (
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
+        <>
+        <Card>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {jobStatusFilters.map((filter) => {
+              const selected = selectedStatus === filter.key;
+
+              return (
+                <Link
+                  aria-current={selected ? "page" : undefined}
+                  href={filter.key === "active" ? "/maintenance" : `/maintenance?status=${filter.key}`}
+                  key={filter.key}
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 6,
+                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
+                    background: selected ? "var(--accent)" : "var(--surface)",
+                    fontWeight: 700,
+                    padding: "8px 10px",
+                    textDecoration: "none"
+                  }}
+                >
+                  {filter.label} ({filterCountByKey(filter.key)})
+                </Link>
+              );
+            })}
+          </div>
+          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
+            Active work shows scheduled, in-progress, submitted, and ready-for-report jobs. Use Completed or All jobs for history.
+          </div>
+        </Card>
+        {filteredJobs.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <colgroup>
@@ -238,7 +310,7 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => {
+              {filteredJobs.map((job) => {
                 const report = reportsByJobId.get(job.id);
                 const jobFindings = findingsByJobId.get(job.id) ?? [];
                 const jobAssets = equipmentByJobId.get(job.id) ?? [];
@@ -347,6 +419,10 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
             </tbody>
           </table>
         </Card>
+        ) : (
+          <EmptyState title="No jobs in this view" message="Choose another status filter or create a new maintenance job." />
+        )}
+        </>
       ) : (
         <EmptyState title="No jobs yet" message="Create the first maintenance plan and scheduled job." />
       )}
