@@ -3,6 +3,7 @@ import Link from "next/link";
 import { addFinding, startJob, submitJob } from "@/app/technician/today/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -182,35 +183,16 @@ export default async function TechnicianTodayPage({ searchParams }: TechnicianTo
         <EmptyState title="Jobs unavailable" message="The job queue could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <>
-        <Card>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {technicianJobFilters.map((filter) => {
-              const selected = selectedStatus === filter.key;
-
-              return (
-                <Link
-                  aria-current={selected ? "page" : undefined}
-                  href={filter.key === "active" ? "/technician/today" : `/technician/today?status=${filter.key}`}
-                  key={filter.key}
-                  style={{
-                    background: selected ? "var(--accent)" : "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
-                    fontWeight: 700,
-                    padding: "8px 10px",
-                    textDecoration: "none"
-                  }}
-                >
-                  {filter.label} ({filterCountByKey(filter.key)})
-                </Link>
-              );
-            })}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
-            Action needed shows jobs to start and field work still in progress. Submitted jobs are locked for management review.
-          </div>
-        </Card>
+        <FilterBar
+          description="Action needed shows jobs to start and field work still in progress. Submitted jobs are locked for management review."
+          items={technicianJobFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "active" ? "/technician/today" : `/technician/today?status=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedStatus}
+        />
         {filteredJobs.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">

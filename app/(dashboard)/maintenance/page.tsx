@@ -4,6 +4,7 @@ import { closeJobFromIssuedReport, createPlanAndJob, startJobReview } from "@/ap
 import { CreateJobForm } from "@/app/(dashboard)/maintenance/create-job-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -245,35 +246,16 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
         <ErrorState title="Jobs unavailable" message="The maintenance job list could not be loaded." />
       ) : jobs && jobs.length > 0 ? (
         <>
-        <Card>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {jobStatusFilters.map((filter) => {
-              const selected = selectedStatus === filter.key;
-
-              return (
-                <Link
-                  aria-current={selected ? "page" : undefined}
-                  href={filter.key === "active" ? "/maintenance" : `/maintenance?status=${filter.key}`}
-                  key={filter.key}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
-                    background: selected ? "var(--accent)" : "var(--surface)",
-                    fontWeight: 700,
-                    padding: "8px 10px",
-                    textDecoration: "none"
-                  }}
-                >
-                  {filter.label} ({filterCountByKey(filter.key)})
-                </Link>
-              );
-            })}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
-            Active work shows scheduled, in-progress, submitted, and ready-for-report jobs. Use Completed or All jobs for history.
-          </div>
-        </Card>
+        <FilterBar
+          description="Active work shows scheduled, in-progress, submitted, and ready-for-report jobs. Use Completed or All jobs for history."
+          items={jobStatusFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "active" ? "/maintenance" : `/maintenance?status=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedStatus}
+        />
         {filteredJobs.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">

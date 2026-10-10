@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -155,35 +156,16 @@ export default async function ClientDashboardPage({ searchParams }: ClientDashbo
             </div>
           </div>
         </Card>
-        <Card>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {evidenceFilters.map((filter) => {
-              const selected = selectedEvidence === filter.key;
-
-              return (
-                <Link
-                  aria-current={selected ? "page" : undefined}
-                  href={filter.key === "all" ? "/client/dashboard" : `/client/dashboard?evidence=${filter.key}`}
-                  key={filter.key}
-                  style={{
-                    background: selected ? "var(--accent)" : "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
-                    fontWeight: 700,
-                    padding: "8px 10px",
-                    textDecoration: "none"
-                  }}
-                >
-                  {filter.label} ({filterCountByKey(filter.key)})
-                </Link>
-              );
-            })}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
-            Use evidence filters to quickly find reports with field findings or structured checklist results.
-          </div>
-        </Card>
+        <FilterBar
+          description="Use evidence filters to quickly find reports with field findings or structured checklist results."
+          items={evidenceFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "all" ? "/client/dashboard" : `/client/dashboard?evidence=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedEvidence}
+        />
         {filteredReports.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">

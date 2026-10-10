@@ -3,6 +3,7 @@ import Link from "next/link";
 import { generateReportShell, issueReport, reviewReport } from "@/app/(dashboard)/reports/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { requireProfile } from "@/lib/auth/current-user";
@@ -229,35 +230,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <ErrorState title="Evidence unavailable" message="Captured findings could not be loaded." />
       ) : reports && reports.length > 0 ? (
         <>
-        <Card>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {reportStatusFilters.map((filter) => {
-              const selected = selectedStatus === filter.key;
-
-              return (
-                <Link
-                  aria-current={selected ? "page" : undefined}
-                  href={filter.key === "active" ? "/reports" : `/reports?status=${filter.key}`}
-                  key={filter.key}
-                  style={{
-                    background: selected ? "var(--accent)" : "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    color: selected ? "var(--accent-foreground)" : "var(--foreground)",
-                    fontWeight: 700,
-                    padding: "8px 10px",
-                    textDecoration: "none"
-                  }}
-                >
-                  {filter.label} ({filterCountByKey(filter.key)})
-                </Link>
-              );
-            })}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.75rem" }}>
-            Action needed shows generated reports awaiting review and reviewed reports ready to issue. Use Issued or All reports for history.
-          </div>
-        </Card>
+        <FilterBar
+          description="Action needed shows generated reports awaiting review and reviewed reports ready to issue. Use Issued or All reports for history."
+          items={reportStatusFilters.map((filter) => ({
+            count: filterCountByKey(filter.key),
+            href: filter.key === "active" ? "/reports" : `/reports?status=${filter.key}`,
+            key: filter.key,
+            label: filter.label
+          }))}
+          selectedKey={selectedStatus}
+        />
         {filteredReports.length > 0 ? (
         <Card className="table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
