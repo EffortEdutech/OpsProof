@@ -129,20 +129,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
-      <PageHeader title="Reports" description="Generate report records from completed maintenance evidence." />
+      <PageHeader title="Reports" description="Generate, review, and issue report records from completed maintenance evidence." />
       {params?.created ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report shell generated.
+          Report shell generated. Open it to review field and checklist evidence.
         </Card>
       ) : null}
       {params?.reviewed ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report reviewed.
+          Report reviewed. It is ready to issue to the client portal.
         </Card>
       ) : null}
       {params?.issued ? (
         <Card role="status" style={{ borderColor: "#9cc9a8", color: "#22543d" }}>
-          Report issued.
+          Report issued. The maintenance job is closed and the report is visible to the client.
         </Card>
       ) : null}
       {params?.error ? (
@@ -150,7 +150,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           title="Report not generated"
           message={
             params.error === "missing-job"
-              ? "Choose a submitted maintenance job."
+              ? "Choose a job under management review."
               : params.error === "job-not-under-review"
                 ? "Start management review before generating a report."
                 : params.error === "report-exists"
@@ -160,6 +160,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         />
       ) : null}
       <Card>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>1. Generate report shell</h2>
+        <div style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
+          Select a job that is under management review and has no active report yet.
+        </div>
         <form action={generateReportShell} style={{ display: "grid", gap: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
             <select aria-label="Maintenance job" disabled={!hasJobs} name="job_id" required style={fieldStyle}>
@@ -179,6 +183,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </div>
         </form>
       </Card>
+      <h2 style={{ fontSize: "1rem", margin: "0.5rem 0 0" }}>2. Review and issue reports</h2>
       {reportsError ? (
         <ErrorState title="Reports unavailable" message="The report list could not be loaded." />
       ) : findingsError || jobEquipmentError || inspectionsError || resultsError ? (
@@ -272,10 +277,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       {report.status === "REVIEWED" ? (
                         <form action={issueReport}>
                           <input name="report_id" type="hidden" value={report.id} />
-                          <Button type="submit">Issue</Button>
+                          <Button type="submit">Issue Report</Button>
                         </form>
                       ) : null}
-                      {report.status === "ISSUED" ? "Issued" : null}
+                      {report.status === "ISSUED" ? "Issued and job closed" : null}
                     </td>
                   </tr>
                 );
@@ -284,7 +289,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </table>
         </Card>
       ) : (
-        <EmptyState title="No reports yet" message="Generate the first report shell from a maintenance job." />
+        <EmptyState title="No reports yet" message="Start management review on a job, then generate the first report shell." />
       )}
     </div>
   );

@@ -136,6 +136,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         }))
       };
     }) ?? [];
+  const checklistResultCount = inspectionResults?.length ?? 0;
 
   return (
     <div className="print-sheet" style={{ display: "grid", gap: "1rem" }}>
@@ -156,6 +157,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       </div>
 
       <Card className="print-section">
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>1. Report summary</h2>
         <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
           <Field label="Client" value={report.maintenance_jobs?.clients?.name ?? "Not set"} />
           <Field label="Site" value={report.maintenance_jobs?.sites?.name ?? "Not set"} />
@@ -164,34 +166,13 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
           <Field label="Generated" value={formatDate(report.generated_at)} />
           <Field label="Issued" value={formatDate(report.issued_at)} />
           <Field label="Findings" value={`${findings?.length ?? 0}`} />
+          <Field label="Checklist" value={`${checklistResultCount} result${checklistResultCount === 1 ? "" : "s"}`} />
           <Field label="Type" value="Maintenance" />
         </div>
       </Card>
 
-      <Card className="no-print">
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Report action</h2>
-        {report.status === "GENERATED" ? (
-          <form action={reviewReport}>
-            <input name="report_id" type="hidden" value={report.id} />
-            <Button type="submit" variant="secondary">
-              Mark Reviewed
-            </Button>
-          </form>
-        ) : null}
-        {report.status === "REVIEWED" ? (
-          <form action={issueReport}>
-            <input name="report_id" type="hidden" value={report.id} />
-            <Button type="submit">Issue Report</Button>
-          </form>
-        ) : null}
-        {report.status === "ISSUED" ? <div>Issued reports are visible to the scoped client portal.</div> : null}
-        {report.status !== "GENERATED" && report.status !== "REVIEWED" && report.status !== "ISSUED" ? (
-          <div style={{ color: "var(--muted)" }}>No action is available for this report state.</div>
-        ) : null}
-      </Card>
-
       <Card className="print-section">
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Evidence included</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>2. Field evidence</h2>
         {findingsError ? (
           <EmptyState title="Evidence unavailable" message="Captured findings could not be loaded." />
         ) : findings && findings.length > 0 ? (
@@ -214,7 +195,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       </Card>
 
       <Card className="print-section">
-        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>Checklist results</h2>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>3. Checklist evidence</h2>
         {inspectionsError || templateItemsError || resultsError ? (
           <EmptyState title="Checklist unavailable" message="Structured checklist results could not be loaded." />
         ) : (
@@ -224,6 +205,40 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
             groups={checklistGroups}
           />
         )}
+      </Card>
+
+      <Card className="no-print">
+        <h2 style={{ fontSize: "1rem", margin: "0 0 1rem" }}>4. Report action</h2>
+        {report.status === "GENERATED" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Mark reviewed after confirming the field evidence and checklist evidence above.
+            </div>
+            <form action={reviewReport}>
+              <input name="report_id" type="hidden" value={report.id} />
+              <Button type="submit" variant="secondary">
+                Mark Reviewed
+              </Button>
+            </form>
+          </div>
+        ) : null}
+        {report.status === "REVIEWED" ? (
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+              Issue this report to make it visible in the client portal. Issuing also closes the maintenance job.
+            </div>
+            <form action={issueReport}>
+              <input name="report_id" type="hidden" value={report.id} />
+              <Button type="submit">Issue Report</Button>
+            </form>
+          </div>
+        ) : null}
+        {report.status === "ISSUED" ? (
+          <div>Issued reports are visible to the scoped client portal. The maintenance job is closed after issue.</div>
+        ) : null}
+        {report.status !== "GENERATED" && report.status !== "REVIEWED" && report.status !== "ISSUED" ? (
+          <div style={{ color: "var(--muted)" }}>No action is available for this report state.</div>
+        ) : null}
       </Card>
     </div>
   );
