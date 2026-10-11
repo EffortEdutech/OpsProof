@@ -89,7 +89,7 @@ function summaryLines(data: IssuedReportData, section: ReportLayoutSection): Pdf
   const fields = [...(section.binding.fields ?? []), "findingCount", "checklistResultCount"];
 
   return fields.map((field) => ({
-    text: `${renderSummaryLabel(field)}: ${renderSummaryValue(data, field)}`
+    text: `  ${renderSummaryLabel(field)}: ${renderSummaryValue(data, field)}`
   }));
 }
 
@@ -98,10 +98,12 @@ function assetLines(data: IssuedReportData): PdfLine[] {
     return [{ text: "This report has no assigned assets attached." }];
   }
 
-  return data.assets.flatMap((asset) => [
-    {
-      text: `${asset.assetCode} | ${asset.equipmentType} | ${asset.systemName} | ${asset.location} | ${asset.inspectionStatus}`
-    }
+  return data.assets.flatMap((asset, index) => [
+    { size: 11, text: `  Asset ${index + 1}: ${asset.assetCode}` },
+    { text: `    Type: ${asset.equipmentType}` },
+    { text: `    System: ${asset.systemName}` },
+    { text: `    Location: ${asset.location}` },
+    { text: `    Inspection status: ${asset.inspectionStatus}` }
   ]);
 }
 
@@ -114,12 +116,13 @@ function findingLines(data: IssuedReportData): PdfLine[] {
     return [{ text: "This report was generated without field findings." }];
   }
 
-  return data.findings.flatMap((finding) => [
-    {
-      text: `${finding.title} | ${finding.severity} | ${finding.status} | ${formatDate(finding.createdAt)}`
-    },
-    ...(finding.description ? [{ text: `Description: ${finding.description}` }] : []),
-    ...(finding.recommendation ? [{ text: `Recommendation: ${finding.recommendation}` }] : [])
+  return data.findings.flatMap((finding, index) => [
+    { size: 11, text: `  Finding ${index + 1}: ${finding.title}` },
+    { text: `    Severity: ${finding.severity}` },
+    { text: `    Status: ${finding.status}` },
+    { text: `    Captured: ${formatDate(finding.createdAt)}` },
+    ...(finding.description ? [{ text: `    Description: ${finding.description}` }] : []),
+    ...(finding.recommendation ? [{ text: `    Recommendation: ${finding.recommendation}` }] : [])
   ]);
 }
 
@@ -132,10 +135,12 @@ function checklistLines(data: IssuedReportData): PdfLine[] {
     return [{ text: "This report has no structured checklist results attached." }];
   }
 
-  return data.checklistGroups.flatMap((group) => [
-    { text: `${group.assetCode} | ${group.checklistName} | ${group.status}` },
+  return data.checklistGroups.flatMap((group, index) => [
+    { size: 11, text: `  Checklist ${index + 1}: ${group.assetCode}` },
+    { text: `    Template: ${group.checklistName}` },
+    { text: `    Status: ${group.status}` },
     ...group.items.map((item) => ({
-      text: `- ${item.prompt}: ${item.resultStatus ?? "Not answered"}`
+      text: `    - ${item.prompt}: ${item.resultStatus ?? "Not answered"}`
     }))
   ]);
 }

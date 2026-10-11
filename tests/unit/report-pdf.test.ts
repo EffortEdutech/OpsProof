@@ -100,11 +100,13 @@ describe("report PDF renderer", () => {
     expect(lines).toContain("UKB-2026-000004");
     expect(lines).toContain("FireMaint Formal Maintenance Report");
     expect(lines).toContain("Maintenance Report UKB-JOB-20261008-D89B92");
-    expect(lines).toContain("Client: Client A");
-    expect(lines).toContain("Site: Client A Demo Site");
+    expect(lines).toContain("Client: Client A | Site: Client A Demo Site");
     expect(lines).toContain("Job: UKB-JOB-20261008-D89B92");
-    expect(lines).toContain("CLIENT-A-EXT-001 | Fire Extinguisher | Fire Protection | main entrance | LOCKED");
-    expect(lines).toContain("Pressure failure | CRITICAL | OPEN | 2026-10-08");
+    expect(lines).toContain("Asset 1: CLIENT-A-EXT-001");
+    expect(lines).toContain("Type: Fire Extinguisher");
+    expect(lines).toContain("Finding 1: Pressure failure");
+    expect(lines).toContain("Severity: CRITICAL");
+    expect(lines).toContain("Checklist 1: CLIENT-A-EXT-001");
     expect(lines).toContain("- Pressure indicator is in acceptable range where applicable: FAIL");
   });
 });
