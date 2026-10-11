@@ -90,6 +90,7 @@ describe("report PDF renderer", () => {
     expect(rendered.startsWith("%PDF-1.4")).toBe(true);
     expect(rendered).toContain("xref");
     expect(rendered).toContain("trailer");
+    expect(rendered).toContain("Page 1 of 1");
     expect(rendered.endsWith("%%EOF")).toBe(true);
   });
 
@@ -97,6 +98,7 @@ describe("report PDF renderer", () => {
     const lines = buildReportPdfTextLines(reportData, standardMaintenanceReportLayout);
 
     expect(lines).toContain("UKB-2026-000004");
+    expect(lines).toContain("FireMaint Formal Maintenance Report");
     expect(lines).toContain("Maintenance Report UKB-JOB-20261008-D89B92");
     expect(lines).toContain("Client: Client A");
     expect(lines).toContain("Site: Client A Demo Site");

@@ -173,9 +173,11 @@ export function buildReportPdfTextLines(data: IssuedReportData, layout: ReportLa
 
 function buildDocumentLines(data: IssuedReportData, layout: ReportLayoutDefinition): PdfLine[] {
   const lines: PdfLine[] = [
+    { size: 10, text: "FireMaint Formal Maintenance Report" },
     { size: 18, text: data.report.reportNumber },
     { size: 12, text: data.report.title ?? "Maintenance report" },
     { size: 10, text: `Status: ${data.report.status}` },
+    { size: 10, text: `Client: ${data.client.name} | Site: ${data.site.name}` },
     { text: "" }
   ];
 
@@ -222,6 +224,17 @@ function paginate(lines: PdfLine[]) {
   return pages;
 }
 
+function footerCommands(data: IssuedReportData, pageNumber: number, pageCount: number) {
+  const left = `${data.report.reportNumber} | ${data.client.name} | ${data.site.name}`;
+  const right = `Page ${pageNumber} of ${pageCount}`;
+
+  return [
+    `0.80 w 48 42 m ${page.width - 48} 42 l S`,
+    `BT /F1 8 Tf 48 28 Td (${escapePdfText(left)}) Tj ET`,
+    `BT /F1 8 Tf ${page.width - 104} 28 Td (${escapePdfText(right)}) Tj ET`
+  ];
+}
+
 function pdfObject(id: number, content: string) {
   return `${id} 0 obj\n${content}\nendobj\n`;
 }
@@ -249,7 +262,7 @@ export function renderReportPdf(data: IssuedReportData, layout: ReportLayoutDefi
   });
 
   pageStreams.forEach((stream, index) => {
-    const content = stream.join("\n");
+    const content = [...stream, ...footerCommands(data, index + 1, pageCount)].join("\n");
     objects.push(pdfObject(contentObjectStart + index, `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}\nendstream`));
   });
 
