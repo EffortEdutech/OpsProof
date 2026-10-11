@@ -57,9 +57,9 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
           </div>
           <Link
             className="no-print inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 font-medium text-[var(--foreground)]"
-            href={`/api/reports/${reportData.report.id}/download`}
+            href={`/api/reports/${reportData.report.id}/download?format=pdf`}
           >
-            Download
+            Download PDF
           </Link>
           <StatusBadge>{reportStatusLabel[reportData.report.status] ?? reportData.report.status}</StatusBadge>
         </div>

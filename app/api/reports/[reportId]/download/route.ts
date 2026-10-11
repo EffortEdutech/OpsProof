@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/current-user";
 import { canAccessClientPortal, canAccessManagement } from "@/lib/permissions/roles";
 import { fetchIssuedReportData } from "@/lib/reports/issued-report-data";
 import { renderReportHtml } from "@/lib/reports/report-html";
+import { renderReportPdf } from "@/lib/reports/report-pdf";
 import { standardMaintenanceReportLayout } from "@/lib/reports/standard-maintenance-report-layout";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,11 +13,11 @@ type DownloadReportRouteProps = {
   }>;
 };
 
-function filenameFor(reportNumber: string) {
-  return `${reportNumber.replace(/[^a-z0-9_-]+/gi, "-")}.html`;
+function filenameFor(reportNumber: string, extension: "html" | "pdf") {
+  return `${reportNumber.replace(/[^a-z0-9_-]+/gi, "-")}.${extension}`;
 }
 
-export async function GET(_request: Request, { params }: DownloadReportRouteProps) {
+export async function GET(request: Request, { params }: DownloadReportRouteProps) {
   const profile = await getCurrentProfile();
 
   if (!profile) {
@@ -37,11 +38,23 @@ export async function GET(_request: Request, { params }: DownloadReportRouteProp
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
 
-  const html = renderReportHtml(data, standardMaintenanceReportLayout);
+  const format = new URL(request.url).searchParams.get("format");
 
+  if (format === "pdf") {
+    const pdf = renderReportPdf(data, standardMaintenanceReportLayout);
+
+    return new NextResponse(pdf, {
+      headers: {
+        "Content-Disposition": `attachment; filename="${filenameFor(data.report.reportNumber, "pdf")}"`,
+        "Content-Type": "application/pdf"
+      }
+    });
+  }
+
+  const html = renderReportHtml(data, standardMaintenanceReportLayout);
   return new NextResponse(html, {
     headers: {
-      "Content-Disposition": `attachment; filename="${filenameFor(data.report.reportNumber)}"`,
+      "Content-Disposition": `attachment; filename="${filenameFor(data.report.reportNumber, "html")}"`,
       "Content-Type": "text/html; charset=utf-8"
     }
   });
