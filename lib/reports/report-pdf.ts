@@ -167,6 +167,10 @@ function sectionLines(data: IssuedReportData, section: ReportLayoutSection): Pdf
   }
 }
 
+export function buildReportPdfTextLines(data: IssuedReportData, layout: ReportLayoutDefinition) {
+  return buildDocumentLines(data, layout).map((line) => normalizeText(line.text));
+}
+
 function buildDocumentLines(data: IssuedReportData, layout: ReportLayoutDefinition): PdfLine[] {
   const lines: PdfLine[] = [
     { size: 18, text: data.report.reportNumber },
